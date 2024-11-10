@@ -20,7 +20,6 @@ from scipy.stats import rayleigh, norm
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KernelDensity
 
-# Just a comment for GitHub destkop app practice
 
 # TOTAL_DISTANCE => TRACK_LENGTH
 
