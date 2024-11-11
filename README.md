@@ -1,1 +1,1 @@
-_a scrappy litlle tool for tracking analysis_
+_A scrappy litlle tool for tracking analysis_
