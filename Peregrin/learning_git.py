@@ -2,6 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 
@@ -26,7 +27,7 @@ gradient_circle = radial_gradient(10)
 # Plotting
 fig, ax = plt.subplots()
 
-cmap = ['red', 'white']
+cmap = mcolors.LinearSegmentedColormap.from_list("", ["white", "#9b181eff"])
 
 # Display the gradient as an image, adjust position and scaling with extent
 extent = (center_x - 1, center_x + 1, center_y - 1, center_y + 1)
