@@ -7,22 +7,22 @@ from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 
 # Create a radial gradient
-def radial_gradient(radius):
-    size = 10 * radius
+def radial_gradient(resolution):
+    size = 10 * resolution
     x = np.linspace(-1, 1, size)
     y = np.linspace(-1, 1, size)
     X, Y = np.meshgrid(x, y)
     distance = np.sqrt(X**2 + Y**2)*4
     mask = np.clip(1 - distance, 0, 1)  # Fade out to edges
 
-    return mask * 200 # Scale color by the mask intensity
+    return mask # Scale color by the mask intensity
 
   # Maximum color intensity for gradient, use a scalar value
 
 center_x, center_y = 5, 5
 
 # Generate the gradient mask
-gradient_circle = radial_gradient(10)
+gradient_circle = radial_gradient(100)
 
 # Plotting
 fig, ax = plt.subplots()
