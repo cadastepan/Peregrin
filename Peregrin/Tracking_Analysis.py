@@ -25,10 +25,10 @@ from sklearn.neighbors import KernelDensity
 
 
 # INPUT FILE:
-input_file = r"Z:\Shared\bryjalab\users\Branislav\Collagen Migration Assay DATA\data 30-10-24 cell concentration optimalization\position_4\C2-position_spots.csv"
+input_file = r"Z:\Shared\bryjalab\users\Branislav\Collagen Migration Assay DATA\data 23-7-24\run1\position_4!\C2-position_spots.csv"
 
 # SAVE PATH:
-save_path = r"Z:\Shared\bryjalab\users\Branislav\Collagen Migration Assay DATA\data 30-10-24 cell concentration optimalization\position_4\analysed"
+save_path = r"Z:\Shared\bryjalab\users\Branislav\Collagen Migration Assay DATA\data 23-7-24\run1\position_4!\analysed"
 
 # Function fro file deletion in a selected folder 
 """for filename in os.listdir(save_path): # deletion of all files in selected folder
@@ -43,7 +43,7 @@ save_path = r"Z:\Shared\bryjalab\users\Branislav\Collagen Migration Assay DATA\d
             print(f"Skipped directory: {file_path}")
     except Exception as e:
         print(f"Failed to delete {file_path}. Reason: {e}")
-print("All files have been deleted")"""
+print("All files have been deleted.")"""
 
 
 title_size = 18
@@ -344,6 +344,15 @@ def calculate_number_of_frames_per_cell(spot_stats_df):
 
     return frames_per_track
 
+def radial_gradient(radius, fade_color):
+    size = 2 * radius
+    x = np.linspace(-1, 1, size)
+    y = np.linspace(-1, 1, size)
+    X, Y = np.meshgrid(x, y)
+    distance = np.sqrt(X**2 + Y**2)
+    mask = np.clip(1 - distance, 0, 1)  # Fade out to edges
+    
+    return mask * fade_color
 
 butter_df = butter(df, unneccessary_float_columns)
 distances_for_each_cell_per_frame_df = calculate_traveled_distances_for_each_cell_per_frame(butter_df) # Call the funciton to clalculate distances for each cell per frame and create the Spot_statistics .csv file
@@ -376,7 +385,7 @@ Time_stats3_df.to_csv((op.join(save_path, 'Time_stats.csv')), index=False) # Sav
 
 
 
-def split_dataframe_by_percentiles(df, column_name):
+"""def split_dataframe_by_percentiles(df, column_name):
     # Get to know the data frames name
     df_name = [name for name, value in globals().items() if value is df][0]
 
@@ -408,12 +417,12 @@ def split_dataframe_by_percentiles(df, column_name):
 
 
     return df_thresholded_at_10th_percentile, df_thresholded_at_20th_percentile, df_thresholded_at_30th_percentile, df_thresholded_at_40th_percentile, df_thresholded_at_50th_percentile, df_thresholded_at_60th_percentile, df_thresholded_at_70th_percentile, df_thresholded_at_80th_percentile, df_thresholded_at_90th_percentile
-Track_stats_thresholded_at_10th_percentile, Track_stats_thresholded_at_20th_percentile, Track_stats_thresholded_at_30th_percentile, Track_stats_thresholded_at_40th_percentile, Track_stats_thresholded_at_50th_percentile, Track_stats_thresholded_at_60th_percentile, Track_stats_thresholded_at_70th_percentile, Track_stats_thresholded_at_80th_percentile, Track_stats_thresholded_at_90th_percentile = split_dataframe_by_percentiles(Track_stats3_df, 'NET_DISTANCE')
+Track_stats_thresholded_at_10th_percentile, Track_stats_thresholded_at_20th_percentile, Track_stats_thresholded_at_30th_percentile, Track_stats_thresholded_at_40th_percentile, Track_stats_thresholded_at_50th_percentile, Track_stats_thresholded_at_60th_percentile, Track_stats_thresholded_at_70th_percentile, Track_stats_thresholded_at_80th_percentile, Track_stats_thresholded_at_90th_percentile = split_dataframe_by_percentiles(Track_stats3_df, 'NET_DISTANCE')"""
 
-# def split_dataframe_by_percentiles(df, column_name); column_name = 'NET_DISTANCE', 'TOTAL_DISTANCE', 'CONFINEMENT_RATIO', 'SPEED_MEDIAN AND OR MEAN, ETC 
+# You should try: split_dataframe_by_percentiles(df, column_name); column_name = 'NET_DISTANCE', 'TOTAL_DISTANCE', 'CONFINEMENT_RATIO', 'SPEED_MEDIAN AND OR MEAN, ETC 
 
 
-def histogram_cells_distance(df, metric, str):
+"""def histogram_cells_distance(df, metric, str):
     
     # Sort the DataFrame by 'TOTAL_DISTANCE' in ascending order
     df_sorted = df.sort_values(by=metric)
@@ -512,9 +521,9 @@ def histogram_cells_distance(df, metric, str):
     plt.savefig(op.join(save_path, f"02f_Histogram_{str}_distance_traveled_per_cell.png"))
     # plt.show()
 # histogram_cells_distance(Track_stats3_df, 'NET_DISTANCE', 'Net')
-# histogram_cells_distance(Track_stats3_df, 'TOTAL_DISTANCE', 'Total')
+# histogram_cells_distance(Track_stats3_df, 'TOTAL_DISTANCE', 'Total')"""
 
-def histogram_nth_percentile_distance(df, metric, num_groups, percentiles, str, threshold):
+"""def histogram_nth_percentile_distance(df, metric, num_groups, percentiles, str, threshold):
 
     # Recognizing the presence of a threshold
     if threshold == None:
@@ -634,9 +643,9 @@ histogram_nth_percentile_distance(Track_stats3_df, 'NET_DISTANCE', 100, 1, 'Net'
 # histogram_nth_percentile_distance(Track_stats_thresholded_at_60th_percentile, 'TOTAL_DISTANCE', 20, 5, 'Total', 'thresholded_at_60th_percentile') # 60th
 # histogram_nth_percentile_distance(Track_stats_thresholded_at_60th_percentile, 'NET_DISTANCE', 20, 5, 'Net', 'thresholded_at_60th_percentile')
 # histogram_nth_percentile_distance(Track_stats_thresholded_at_80th_percentile, 'TOTAL_DISTANCE', 20, 5, 'Total', 'thresholded_at_80th_percentile') # 80th
-# histogram_nth_percentile_distance(Track_stats_thresholded_at_80th_percentile, 'NET_DISTANCE', 20, 5, 'Net', 'thresholded_at_80th_percentile')
+# histogram_nth_percentile_distance(Track_stats_thresholded_at_80th_percentile, 'NET_DISTANCE', 20, 5, 'Net', 'thresholded_at_80th_percentile')"""
 
-def donut(df, ax, outer_radius, inner_radius, kde_bw):
+"""def donut(df, ax, outer_radius, inner_radius, kde_bw):
     # Extend the data circularly to account for wrap-around at 0 and 2*pi
     extended_data = np.concatenate([df - 2 * np.pi, df, df + 2 * np.pi])
 
@@ -665,9 +674,9 @@ def donut(df, ax, outer_radius, inner_radius, kde_bw):
     ax.set_xticklabels([])
     ax.spines['polar'].set_visible(False)  # Hide the outer frame
 
-    return theta_mesh, r_mesh, kde_values, norm
+    return theta_mesh, r_mesh, kde_values, norm"""
 
-def df_gaussian_donut(df, metric, subject, heatmap, threshold):
+"""def df_gaussian_donut(df, metric, subject, heatmap, threshold):
 
     # Recognizing the presence of a threshold
     if threshold == None:
@@ -714,10 +723,9 @@ df_gaussian_donut(Track_stats_thresholded_at_40th_percentile, 'MEAN_DIRECTION_RA
 df_gaussian_donut(Track_stats_thresholded_at_60th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'inferno', 'thresholded_at_60th_percentile') # 60th
 df_gaussian_donut(Track_stats_thresholded_at_80th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'inferno', 'thresholded_at_80th_percentile') # 80th
 df_gaussian_donut(Track_stats_thresholded_at_90th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'inferno', 'thresholded_at_90th_percentile') # 90th
-df_gaussian_donut(Time_stats3_df, 'MEAN_DIRECTION_RAD_weight', 'Frames', 'viridis', None)
+df_gaussian_donut(Time_stats3_df, 'MEAN_DIRECTION_RAD_weight', 'Frames', 'viridis', None)"""
 
-
-def ticks_for_mean_direction_clock(df, metric, subject, threshold):
+"""def ticks_for_mean_direction_clock(df, metric, subject, threshold):
 
     # Recognizing the presence of a threshold
     if threshold == None:
@@ -760,9 +768,9 @@ def ticks_for_mean_direction_clock(df, metric, subject, threshold):
 # ticks_for_mean_direction_clock(Track_stats_thresholded_at_40th_percentile, 'MEAN_DIRECTION_RAD', 'Cell', 'thresholded_at_40th_percentile') # 40th
 # ticks_for_mean_direction_clock(Track_stats_thresholded_at_60th_percentile, 'MEAN_DIRECTION_RAD', 'Cell', 'thresholded_at_60th_percentile') # 60th
 # ticks_for_mean_direction_clock(Track_stats_thresholded_at_80th_percentile, 'MEAN_DIRECTION_RAD', 'Cell', 'thresholded_at_80th_percentile') # 80th
-# ticks_for_mean_direction_clock(Time_stats3_df, 'MEAN_DIRECTION_RAD_weight', 'Frame', None)
+# ticks_for_mean_direction_clock(Time_stats3_df, 'MEAN_DIRECTION_RAD_weight', 'Frame', None)"""
 
-def combined_plot(df, metric, subject, colormap, threshold):
+"""def combined_plot(df, metric, subject, colormap, threshold):
 
     # Recognizing the presence of a threshold
     if threshold == None:
@@ -896,7 +904,7 @@ def combined_plot(df, metric, subject, colormap, threshold):
 # combined_plot(Track_stats_thresholded_at_40th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'viridis', 'thresholded_at_40th_percentile') # 40th
 # combined_plot(Track_stats_thresholded_at_60th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'viridis', 'thresholded_at_60th_percentile') # 60th
 # combined_plot(Track_stats_thresholded_at_80th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'viridis', 'thresholded_at_80th_percentile') # 80th
-# combined_plot(Time_stats3_df, 'MEAN_DIRECTION_RAD_weight', 'Frames', 'inferno', None)
+# combined_plot(Time_stats3_df, 'MEAN_DIRECTION_RAD_weight', 'Frames', 'inferno', None)"""
 
 def track_visuals(df, df2):
     # fig and ax definition
@@ -931,7 +939,8 @@ def track_visuals(df, df2):
     ax.set_xlabel('Position X [microns]')
     ax.set_ylabel('Position Y [microns]')
     ax.set_title('Track Visualization', fontsize=title_size)
-    ax.grid(True, which='both', axis='y', color='gainsboro')
+    ax.set_facecolor('gainsboro')
+    ax.grid(True, which='both', axis='both', color='whitesmoke', linewidth=0.5)
 
     # Manually set the major tick locations and labels
     x_ticks_major = np.arange(x_min, x_max, 200)  # Adjust the step size as needed
@@ -979,103 +988,106 @@ def visualize_full_tracks(df, df2, threshold):  #Trakcs visualisation
             dx = x.diff().iloc[-1]
             dy = y.diff().iloc[-1]
             if dx != 0 or dy != 0:
-                arrow = FancyArrowPatch((x.iloc[-2], y.iloc[-2]),
-                                        (x.iloc[-1] + dx, y.iloc[-1] + dy),
-                                        color=track_colors[track_id],
-                                        arrowstyle='->', mutation_scale=5)
-                ax.add_patch(arrow)
+                endpoint = Circle(
+                    (x.iloc[-1], y.iloc[-1]),  # Center of the circle at the last point
+                    radius=5,
+                                    # Set the radius to your preferred size
+                    color=track_colors[track_id],
+                    fill=True                   # Set to False if you want only the outline
+                    )
+                ax.add_patch(endpoint)
 
     plt.savefig((op.join(save_path, f'01a_Full_tracks_snapshot{threshold}.png')))
-    # plt.show()
+    plt.show()
 visualize_full_tracks(df, Track_stats2_df, None)
 # visualize_full_tracks(df, Track_stats_thresholded_at_20th_percentile, 'thresholded_at_20th_percentile') # 20th
-visualize_full_tracks(df, Track_stats_thresholded_at_40th_percentile, 'thresholded_at_40th_percentile') # 40th
-visualize_full_tracks(df, Track_stats_thresholded_at_60th_percentile, 'thresholded_at_60th_percentile') # 60th
-visualize_full_tracks(df, Track_stats_thresholded_at_80th_percentile, 'thresholded_at_80th_percentile') # 80th
-visualize_full_tracks(df, Track_stats_thresholded_at_90th_percentile, 'thresholded_at_90th_percentile') # 90th
+# visualize_full_tracks(df, Track_stats_thresholded_at_40th_percentile, 'thresholded_at_40th_percentile') # 40th
+# visualize_full_tracks(df, Track_stats_thresholded_at_60th_percentile, 'thresholded_at_60th_percentile') # 60th
+# visualize_full_tracks(df, Track_stats_thresholded_at_80th_percentile, 'thresholded_at_80th_percentile') # 80th
+# visualize_full_tracks(df, Track_stats_thresholded_at_90th_percentile, 'thresholded_at_90th_percentile') # 90th
 
-def animate_tracks_growth_over_time(df, df2, threshold):    # Animated tracks visualization
+# def animate_tracks_growth_over_time(df, df2, threshold):    # Animated tracks visualization
 
-    # Recognizing the presence of a threshold
-    if threshold == None:
-        threshold = '_no_threshold'
-    else:
-        threshold = '_' + threshold
+#     # Recognizing the presence of a threshold
+#     if threshold == None:
+#         threshold = '_no_threshold'
+#     else:
+#         threshold = '_' + threshold
 
-    fig, ax, track_ids, track_colors, norm, colormap = track_visuals(df, df2)
+#     fig, ax, track_ids, track_colors, norm, colormap = track_visuals(df, df2)
     
-    # Create a dictionary to store the line objects and arrows for each track
-    track_lines = {track_id: ax.plot([], [], lw=1, color=track_colors[track_id], label=f'Track {track_id}')[0] for track_id in track_ids}
-    arrows = {track_id: [] for track_id in track_ids}
+#     # Create a dictionary to store the line objects and arrows for each track
+#     track_lines = {track_id: ax.plot([], [], lw=1, color=track_colors[track_id], label=f'Track {track_id}')[0] for track_id in track_ids}
+#     arrows = {track_id: [] for track_id in track_ids}
 
-    # Create a smaller colorbar on the left side of the plot (centered vertically)
-    cbar_width = 0.002  # Width of the colorbar
-    cbar_x_pos = 0.02  # X position for the colorbar (left side of the plot)
-    cbar_height = 0.2  # Height of the colorbar (adjust as needed)
-    cbar_y_pos = 0.1 + (0.8 - cbar_height) / 2  # Vertically center the colorbar
+#     # Create a smaller colorbar on the left side of the plot (centered vertically)
+#     cbar_width = 0.002  # Width of the colorbar
+#     cbar_x_pos = 0.02  # X position for the colorbar (left side of the plot)
+#     cbar_height = 0.2  # Height of the colorbar (adjust as needed)
+#     cbar_y_pos = 0.1 + (0.8 - cbar_height) / 2  # Vertically center the colorbar
 
-    cbar_ax = fig.add_axes([cbar_x_pos, cbar_y_pos, cbar_width, cbar_height])  # [left, bottom, width, height]
-    cbar = plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=colormap), cax=cbar_ax)
-    cbar.set_label('net distance', rotation=270, labelpad=17)
-    cbar.ax.yaxis.set_label_position('left')
-    cbar.ax.tick_params(labelsize=8)
-    cbar.outline.set_visible(False)  # Hide the colorbar outline
+#     cbar_ax = fig.add_axes([cbar_x_pos, cbar_y_pos, cbar_width, cbar_height])  # [left, bottom, width, height]
+#     cbar = plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=colormap), cax=cbar_ax)
+#     cbar.set_label('net distance', rotation=270, labelpad=17)
+#     cbar.ax.yaxis.set_label_position('left')
+#     cbar.ax.tick_params(labelsize=8)
+#     cbar.outline.set_visible(False)  # Hide the colorbar outline
 
-    # Create a new axis for displaying the frame count
-    frame_ax = fig.add_axes([0.1, 0.9, 0.8, 0.05])
-    frame_ax.axis('off')  # Hide the new axis
-    frame_text = frame_ax.text(0.5, 0.5, '', ha='center', va='center', transform=frame_ax.transAxes, fontsize=8, )
+#     # Create a new axis for displaying the frame count
+#     frame_ax = fig.add_axes([0.1, 0.9, 0.8, 0.05])
+#     frame_ax.axis('off')  # Hide the new axis
+#     frame_text = frame_ax.text(0.5, 0.5, '', ha='center', va='center', transform=frame_ax.transAxes, fontsize=8, )
     
-    def init():
-        for line in track_lines.values():
-            line.set_data([], [])
-        frame_text.set_text('')
-        return list(track_lines.values()) + [frame_text]
+#     def init():
+#         for line in track_lines.values():
+#             line.set_data([], [])
+#         frame_text.set_text('')
+#         return list(track_lines.values()) + [frame_text]
     
-    def update(frame):
-        # Filter data up to the current frame
-        unique_times = sorted(df['POSITION_T'].unique())
-        current_time = unique_times[min(frame, len(unique_times) - 1)]
-        current_data = df[df['POSITION_T'] <= current_time]
+#     def update(frame):
+#         # Filter data up to the current frame
+#         unique_times = sorted(df['POSITION_T'].unique())
+#         current_time = unique_times[min(frame, len(unique_times) - 1)]
+#         current_data = df[df['POSITION_T'] <= current_time]
         
-        # Update line data and arrows for each track
-        for track_id in track_ids:
-            track_data = current_data[current_data['TRACK_ID'] == track_id]
-            # Sort the track data by time to ensure proper sequence
-            track_data = track_data.sort_values(by='POSITION_T')
-            x = track_data['POSITION_X']
-            y = track_data['POSITION_Y']
-            track_lines[track_id].set_data(x, y)
+#         # Update line data and arrows for each track
+#         for track_id in track_ids:
+#             track_data = current_data[current_data['TRACK_ID'] == track_id]
+#             # Sort the track data by time to ensure proper sequence
+#             track_data = track_data.sort_values(by='POSITION_T')
+#             x = track_data['POSITION_X']
+#             y = track_data['POSITION_Y']
+#             track_lines[track_id].set_data(x, y)
             
-            # Clear previous arrows
-            for arrow in arrows[track_id]:
-                arrow.remove()
-            arrows[track_id] = []
+#             # Clear previous arrows
+#             for arrow in arrows[track_id]:
+#                 arrow.remove()
+#             arrows[track_id] = []
             
-            if len(x) > 1:
-                # Calculate differences to place the arrows
-                dx = x.diff().iloc[-1]
-                dy = y.diff().iloc[-1]
-                if dx != 0 or dy != 0:
-                    # Create the arrow
-                    arrow = FancyArrowPatch((x.iloc[-2], y.iloc[-2]),
-                                            (x.iloc[-1] + dx, y.iloc[-1] + dy),
-                                            color=track_colors[track_id],
-                                            arrowstyle='->', mutation_scale=5)
-                    ax.add_patch(arrow)
-                    arrows[track_id].append(arrow)
+#             if len(x) > 1:
+#                 # Calculate differences to place the arrows
+#                 dx = x.diff().iloc[-1]
+#                 dy = y.diff().iloc[-1]
+#                 if dx != 0 or dy != 0:
+#                     # Create the arrow
+#                     arrow = FancyArrowPatch((x.iloc[-2], y.iloc[-2]),
+#                                             (x.iloc[-1] + dx, y.iloc[-1] + dy),
+#                                             color=track_colors[track_id],
+#                                             arrowstyle='->', mutation_scale=5)
+#                     ax.add_patch(arrow)
+#                     arrows[track_id].append(arrow)
         
-        # Update the frame count text
-        frame_text.set_text(f'Frame: {frame + 1}/{num_frames}')
+#         # Update the frame count text
+#         frame_text.set_text(f'Frame: {frame + 1}/{num_frames}')
 
-        return list(track_lines.values()) + [frame_text] + [arrow for arrow_list in arrows.values() for arrow in arrow_list]
+#         return list(track_lines.values()) + [frame_text] + [arrow for arrow_list in arrows.values() for arrow in arrow_list]
     
-    # Create the animation object
-    num_frames = len(df['POSITION_T'].unique())
-    ani = animation.FuncAnimation(fig, update, frames=num_frames, init_func=init, blit=True, interval=1, repeat=False)
-    ani.save(op.join(save_path, f'01b_Tracks_animation{threshold}.gif'), writer='pillow', fps=15)
-    # plt.show()
-animate_tracks_growth_over_time(df, Track_stats2_df, None)
+#     # Create the animation object
+#     num_frames = len(df['POSITION_T'].unique())
+#     ani = animation.FuncAnimation(fig, update, frames=num_frames, init_func=init, blit=True, interval=1, repeat=False)
+#     ani.save(op.join(save_path, f'01b_Tracks_animation{threshold}.gif'), writer='pillow', fps=15)
+#     # plt.show()
+# animate_tracks_growth_over_time(df, Track_stats2_df, None)
 # animate_tracks_growth_over_time(df, Track_stats_thresholded_at_20th_percentile, 'thresholded_at_20th_percentile') # 20th
 # animate_tracks_growth_over_time(df, Track_stats_thresholded_at_40th_percentile, 'thresholded_at_40th_percentile') # 40th
 # animate_tracks_growth_over_time(df, Track_stats_thresholded_at_60th_percentile, 'thresholded_at_60th_percentile') # 60th
@@ -1084,7 +1096,7 @@ animate_tracks_growth_over_time(df, Track_stats2_df, None)
 cmap_cells = mcolors.LinearSegmentedColormap.from_list("", ["#9b598910", "#9b181eff"]) #303030
 cmap_frames = plt.get_cmap('viridis')
 
-def migration_directions_with_kde_plus_mean(df, metric, subject, scaling_metric, cmap_normalization_metric, cmap, threshold):
+"""def migration_directions_with_kde_plus_mean(df, metric, subject, scaling_metric, cmap_normalization_metric, cmap, threshold):
 
     # Recognizing the presence of a threshold
     if threshold == None:
@@ -1188,10 +1200,10 @@ migration_directions_with_kde_plus_mean(Track_stats_thresholded_at_60th_percenti
 migration_directions_with_kde_plus_mean(Track_stats_thresholded_at_80th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'CONFINEMENT_RATIO', None, cmap_cells, 'thresholded_at_80th_percentile') # 80th
 migration_directions_with_kde_plus_mean(Track_stats_thresholded_at_90th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'CONFINEMENT_RATIO', None, cmap_cells, 'thresholded_at_90th_percentile') # 90th
 migration_directions_with_kde_plus_mean(Time_stats3_df, 'MEAN_DIRECTION_RAD_weight', 'Frames_abs', 'MEAN_DISTANCE', 'POSITION_T', cmap_frames, None)
-migration_directions_with_kde_plus_mean(Time_stats3_df, 'MEAN_DIRECTION_RAD_abs', 'Frames_weight', 'MEAN_DISTANCE', 'POSITION_T', cmap_frames, None)
+migration_directions_with_kde_plus_mean(Time_stats3_df, 'MEAN_DIRECTION_RAD_abs', 'Frames_weight', 'MEAN_DISTANCE', 'POSITION_T', cmap_frames, None)"""
 
 
-# STATISTICS
+"""# STATISTICS
 
 def calculate_direction_of_travel_for_each_cell_return_txt_file(df, txt_file): # look into calculations
 
@@ -1297,3 +1309,4 @@ statistics(Track_stats_thresholded_at_40th_percentile, 'thresholded_at_40th_perc
 statistics(Track_stats_thresholded_at_60th_percentile, 'thresholded_at_60th_percentile') # 60th
 statistics(Track_stats_thresholded_at_80th_percentile, 'thresholded_at_80th_percentile') # 80th
 statistics(Track_stats_thresholded_at_90th_percentile, 'thresholded_at_90th_percentile') # 90th
+"""
