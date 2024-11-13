@@ -385,7 +385,7 @@ Time_stats3_df.to_csv((op.join(save_path, 'Time_stats.csv')), index=False) # Sav
 
 
 
-"""def split_dataframe_by_percentiles(df, column_name):
+def split_dataframe_by_percentiles(df, column_name):
     # Get to know the data frames name
     df_name = [name for name, value in globals().items() if value is df][0]
 
@@ -417,7 +417,7 @@ Time_stats3_df.to_csv((op.join(save_path, 'Time_stats.csv')), index=False) # Sav
 
 
     return df_thresholded_at_10th_percentile, df_thresholded_at_20th_percentile, df_thresholded_at_30th_percentile, df_thresholded_at_40th_percentile, df_thresholded_at_50th_percentile, df_thresholded_at_60th_percentile, df_thresholded_at_70th_percentile, df_thresholded_at_80th_percentile, df_thresholded_at_90th_percentile
-Track_stats_thresholded_at_10th_percentile, Track_stats_thresholded_at_20th_percentile, Track_stats_thresholded_at_30th_percentile, Track_stats_thresholded_at_40th_percentile, Track_stats_thresholded_at_50th_percentile, Track_stats_thresholded_at_60th_percentile, Track_stats_thresholded_at_70th_percentile, Track_stats_thresholded_at_80th_percentile, Track_stats_thresholded_at_90th_percentile = split_dataframe_by_percentiles(Track_stats3_df, 'NET_DISTANCE')"""
+Track_stats_thresholded_at_10th_percentile, Track_stats_thresholded_at_20th_percentile, Track_stats_thresholded_at_30th_percentile, Track_stats_thresholded_at_40th_percentile, Track_stats_thresholded_at_50th_percentile, Track_stats_thresholded_at_60th_percentile, Track_stats_thresholded_at_70th_percentile, Track_stats_thresholded_at_80th_percentile, Track_stats_thresholded_at_90th_percentile = split_dataframe_by_percentiles(Track_stats3_df, 'NET_DISTANCE')
 
 # You should try: split_dataframe_by_percentiles(df, column_name); column_name = 'NET_DISTANCE', 'TOTAL_DISTANCE', 'CONFINEMENT_RATIO', 'SPEED_MEDIAN AND OR MEAN, ETC 
 
@@ -645,7 +645,7 @@ histogram_nth_percentile_distance(Track_stats3_df, 'NET_DISTANCE', 100, 1, 'Net'
 # histogram_nth_percentile_distance(Track_stats_thresholded_at_80th_percentile, 'TOTAL_DISTANCE', 20, 5, 'Total', 'thresholded_at_80th_percentile') # 80th
 # histogram_nth_percentile_distance(Track_stats_thresholded_at_80th_percentile, 'NET_DISTANCE', 20, 5, 'Net', 'thresholded_at_80th_percentile')"""
 
-"""def donut(df, ax, outer_radius, inner_radius, kde_bw):
+def donut(df, ax, outer_radius, inner_radius, kde_bw):
     # Extend the data circularly to account for wrap-around at 0 and 2*pi
     extended_data = np.concatenate([df - 2 * np.pi, df, df + 2 * np.pi])
 
@@ -674,9 +674,9 @@ histogram_nth_percentile_distance(Track_stats3_df, 'NET_DISTANCE', 100, 1, 'Net'
     ax.set_xticklabels([])
     ax.spines['polar'].set_visible(False)  # Hide the outer frame
 
-    return theta_mesh, r_mesh, kde_values, norm"""
+    return theta_mesh, r_mesh, kde_values, norm
 
-"""def df_gaussian_donut(df, metric, subject, heatmap, threshold):
+def df_gaussian_donut(df, metric, subject, heatmap, threshold):
 
     # Recognizing the presence of a threshold
     if threshold == None:
@@ -718,12 +718,12 @@ histogram_nth_percentile_distance(Track_stats3_df, 'NET_DISTANCE', 100, 1, 'Net'
     plt.savefig(op.join(save_path, f'04a_Plot_donut_heatmap-migration_direction_{subject}{threshold}.png'), dpi=300)
     # plt.show()
 df_gaussian_donut(Track_stats3_df, 'MEAN_DIRECTION_RAD', 'Cells', 'inferno', None)
-# df_gaussian_donut(Track_stats_thresholded_at_20th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'inferno', 'thresholded_at_20th_percentile') # 20th
+df_gaussian_donut(Track_stats_thresholded_at_20th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'inferno', 'thresholded_at_20th_percentile') # 20th
 df_gaussian_donut(Track_stats_thresholded_at_40th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'inferno', 'thresholded_at_40th_percentile') # 40th
 df_gaussian_donut(Track_stats_thresholded_at_60th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'inferno', 'thresholded_at_60th_percentile') # 60th
 df_gaussian_donut(Track_stats_thresholded_at_80th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'inferno', 'thresholded_at_80th_percentile') # 80th
 df_gaussian_donut(Track_stats_thresholded_at_90th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'inferno', 'thresholded_at_90th_percentile') # 90th
-df_gaussian_donut(Time_stats3_df, 'MEAN_DIRECTION_RAD_weight', 'Frames', 'viridis', None)"""
+df_gaussian_donut(Time_stats3_df, 'MEAN_DIRECTION_RAD_weight', 'Frames', 'viridis', None)
 
 """def ticks_for_mean_direction_clock(df, metric, subject, threshold):
 
@@ -1000,11 +1000,11 @@ def visualize_full_tracks(df, df2, threshold):  #Trakcs visualisation
     plt.savefig((op.join(save_path, f'01a_Full_tracks_snapshot{threshold}.png')))
     plt.show()
 visualize_full_tracks(df, Track_stats2_df, None)
-# visualize_full_tracks(df, Track_stats_thresholded_at_20th_percentile, 'thresholded_at_20th_percentile') # 20th
-# visualize_full_tracks(df, Track_stats_thresholded_at_40th_percentile, 'thresholded_at_40th_percentile') # 40th
-# visualize_full_tracks(df, Track_stats_thresholded_at_60th_percentile, 'thresholded_at_60th_percentile') # 60th
-# visualize_full_tracks(df, Track_stats_thresholded_at_80th_percentile, 'thresholded_at_80th_percentile') # 80th
-# visualize_full_tracks(df, Track_stats_thresholded_at_90th_percentile, 'thresholded_at_90th_percentile') # 90th
+visualize_full_tracks(df, Track_stats_thresholded_at_20th_percentile, 'thresholded_at_20th_percentile') # 20th
+visualize_full_tracks(df, Track_stats_thresholded_at_40th_percentile, 'thresholded_at_40th_percentile') # 40th
+visualize_full_tracks(df, Track_stats_thresholded_at_60th_percentile, 'thresholded_at_60th_percentile') # 60th
+visualize_full_tracks(df, Track_stats_thresholded_at_80th_percentile, 'thresholded_at_80th_percentile') # 80th
+visualize_full_tracks(df, Track_stats_thresholded_at_90th_percentile, 'thresholded_at_90th_percentile') # 90th
 
 # def animate_tracks_growth_over_time(df, df2, threshold):    # Animated tracks visualization
 
@@ -1096,7 +1096,7 @@ visualize_full_tracks(df, Track_stats2_df, None)
 cmap_cells = mcolors.LinearSegmentedColormap.from_list("", ["#9b598910", "#9b181eff"]) #303030
 cmap_frames = plt.get_cmap('viridis')
 
-"""def migration_directions_with_kde_plus_mean(df, metric, subject, scaling_metric, cmap_normalization_metric, cmap, threshold):
+def migration_directions_with_kde_plus_mean(df, metric, subject, scaling_metric, cmap_normalization_metric, cmap, threshold):
 
     # Recognizing the presence of a threshold
     if threshold == None:
@@ -1194,13 +1194,13 @@ cmap_frames = plt.get_cmap('viridis')
     plt.savefig(op.join(save_path, f'02c_Plot_directions_of_travel_with_mean_and_kernel_density_estimate_{subject}{threshold}.png'), dpi=500)
     # plt.show()
 migration_directions_with_kde_plus_mean(Track_stats3_df, 'MEAN_DIRECTION_RAD', 'Cells', 'CONFINEMENT_RATIO', None, cmap_cells, None)
-# migration_directions_with_kde_plus_mean(Track_stats_thresholded_at_20th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'CONFINEMENT_RATIO', None, cmap_cells, 'thresholded_at_20th_percentile') # 20th
+migration_directions_with_kde_plus_mean(Track_stats_thresholded_at_20th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'CONFINEMENT_RATIO', None, cmap_cells, 'thresholded_at_20th_percentile') # 20th
 migration_directions_with_kde_plus_mean(Track_stats_thresholded_at_40th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'CONFINEMENT_RATIO', None, cmap_cells, 'thresholded_at_40th_percentile') # 40th
 migration_directions_with_kde_plus_mean(Track_stats_thresholded_at_60th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'CONFINEMENT_RATIO', None, cmap_cells, 'thresholded_at_60th_percentile') # 60th
 migration_directions_with_kde_plus_mean(Track_stats_thresholded_at_80th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'CONFINEMENT_RATIO', None, cmap_cells, 'thresholded_at_80th_percentile') # 80th
 migration_directions_with_kde_plus_mean(Track_stats_thresholded_at_90th_percentile, 'MEAN_DIRECTION_RAD', 'Cells', 'CONFINEMENT_RATIO', None, cmap_cells, 'thresholded_at_90th_percentile') # 90th
 migration_directions_with_kde_plus_mean(Time_stats3_df, 'MEAN_DIRECTION_RAD_weight', 'Frames_abs', 'MEAN_DISTANCE', 'POSITION_T', cmap_frames, None)
-migration_directions_with_kde_plus_mean(Time_stats3_df, 'MEAN_DIRECTION_RAD_abs', 'Frames_weight', 'MEAN_DISTANCE', 'POSITION_T', cmap_frames, None)"""
+migration_directions_with_kde_plus_mean(Time_stats3_df, 'MEAN_DIRECTION_RAD_abs', 'Frames_weight', 'MEAN_DISTANCE', 'POSITION_T', cmap_frames, None)
 
 
 """# STATISTICS
