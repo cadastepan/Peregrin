@@ -144,7 +144,7 @@ def calculate_traveled_distances_for_each_cell_per_frame(df):
 
     return pd.DataFrame(result_df)
 
-def calculate_total_distance_traveled_for_each_cell(df):
+def calculate_track_length_traveled_for_each_cell(df):
 
     # Convert 'Track ID' to numeric (if it's not already)
     df['TRACK_ID'] = pd.to_numeric(df['TRACK_ID'], errors='coerce')
@@ -154,13 +154,13 @@ def calculate_total_distance_traveled_for_each_cell(df):
         return np.nan
     
     # Sum distances per Track ID
-    total_distance_per_cell = df.groupby('TRACK_ID')['DISTANCE'].sum().reset_index()
+    track_length_per_cell = df.groupby('TRACK_ID')['DISTANCE'].sum().reset_index()
 
     # Rename columns for clarity
-    total_distance_per_cell.columns = ['TRACK_ID', 'TOTAL_DISTANCE']
+    track_length_per_cell.columns = ['TRACK_ID', 'TRACK_LENGTH']
 
     # Return the results
-    return pd.DataFrame(total_distance_per_cell)
+    return pd.DataFrame(track_length_per_cell)
 
 def calculate_net_distance_traveled_for_each_cell(df):
 
@@ -183,9 +183,9 @@ def calculate_net_distance_traveled_for_each_cell(df):
     # Return the results
     return pd.DataFrame(net_distances)
 
-def calculate_confinement_ratio_for_each_cell_and_aggregate_with_total_distances_net_distances(df):
+def calculate_confinement_ratio_for_each_cell_and_aggregate_with_track_lengths_net_distances(df):
     # Calculate the confinement ratio
-    df['CONFINEMENT_RATIO'] = df['NET_DISTANCE'] / df['TOTAL_DISTANCE']
+    df['CONFINEMENT_RATIO'] = df['NET_DISTANCE'] / df['TRACK_LENGTH']
     Track_stats1_df = df[['TRACK_ID','CONFINEMENT_RATIO']]
     return pd.DataFrame(Track_stats1_df)
 
@@ -356,13 +356,13 @@ def radial_gradient(radius, fade_color):
 
 butter_df = butter(df, unneccessary_float_columns)
 distances_for_each_cell_per_frame_df = calculate_traveled_distances_for_each_cell_per_frame(butter_df) # Call the funciton to clalculate distances for each cell per frame and create the Spot_statistics .csv file
-total_distances_df = calculate_total_distance_traveled_for_each_cell(distances_for_each_cell_per_frame_df) # Calling function to calculate the total distance traveled for each cell from the distances_for_each_cell_per_frame_df
+track_lengths_df = calculate_track_length_traveled_for_each_cell(distances_for_each_cell_per_frame_df) # Calling function to calculate the total distance traveled for each cell from the distances_for_each_cell_per_frame_df
 net_distances_df = calculate_net_distance_traveled_for_each_cell(distances_for_each_cell_per_frame_df) # Calling function to calculate the net distance traveled for each cell from the distances_for_each_cell_per_frame_df
-Track_stats1_df = pd.merge(total_distances_df, net_distances_df, on='TRACK_ID', how='outer') # Merge the total_distances_df and the net_distances_df DataFrames into a new DataFrame: Track_stats1_df
-calculate_confinement_ratio_for_each_cell_and_aggregate_with_total_distances_net_distances(Track_stats1_df) # Call the function to calculate confinement ratios from the Track_statistics1_df and write it into the Track_statistics1_df
+Track_stats1_df = pd.merge(track_lengths_df, net_distances_df, on='TRACK_ID', how='outer') # Merge the track_lengths_df and the net_distances_df DataFrames into a new DataFrame: Track_stats1_df
+calculate_confinement_ratio_for_each_cell_and_aggregate_with_track_lengths_net_distances(Track_stats1_df) # Call the function to calculate confinement ratios from the Track_statistics1_df and write it into the Track_statistics1_df
 
 direction_for_each_cell_per_frame_df = calculate_direction_of_travel_for_each_cell_per_frame(butter_df) # Call the function to calculate direction_for_each_cell_per_frame_df
-Spot_stats1_df = pd.merge(distances_for_each_cell_per_frame_df, direction_for_each_cell_per_frame_df, on=['TRACK_ID','POSITION_T'], how='outer') # Merging total_distances_df and direction_for_each_cell_per_frame_df into Spot_stats_df
+Spot_stats1_df = pd.merge(distances_for_each_cell_per_frame_df, direction_for_each_cell_per_frame_df, on=['TRACK_ID','POSITION_T'], how='outer') # Merging track_lengths_df and direction_for_each_cell_per_frame_df into Spot_stats_df
 
 turn_angles_for_each_cell_per_frame = calculate_turn_angles_for_each_cell_per_frame(Spot_stats1_df) # Call function to calculate the turn angle for each cell per frame
 Spot_stats2_df = pd.merge(Spot_stats1_df, turn_angles_for_each_cell_per_frame, on=['TRACK_ID','POSITION_T'], how='outer') # Merging Spot_stats1_df and turn_angles_for_each_cell_per_frame into Spot_stats2_df DataFrame
@@ -419,12 +419,12 @@ def split_dataframe_by_percentiles(df, column_name):
     return df_thresholded_at_10th_percentile, df_thresholded_at_20th_percentile, df_thresholded_at_30th_percentile, df_thresholded_at_40th_percentile, df_thresholded_at_50th_percentile, df_thresholded_at_60th_percentile, df_thresholded_at_70th_percentile, df_thresholded_at_80th_percentile, df_thresholded_at_90th_percentile
 Track_stats_thresholded_at_10th_percentile, Track_stats_thresholded_at_20th_percentile, Track_stats_thresholded_at_30th_percentile, Track_stats_thresholded_at_40th_percentile, Track_stats_thresholded_at_50th_percentile, Track_stats_thresholded_at_60th_percentile, Track_stats_thresholded_at_70th_percentile, Track_stats_thresholded_at_80th_percentile, Track_stats_thresholded_at_90th_percentile = split_dataframe_by_percentiles(Track_stats3_df, 'NET_DISTANCE')
 
-# You should try: split_dataframe_by_percentiles(df, column_name); column_name = 'NET_DISTANCE', 'TOTAL_DISTANCE', 'CONFINEMENT_RATIO', 'SPEED_MEDIAN AND OR MEAN, ETC 
+# You should try: split_dataframe_by_percentiles(df, column_name); column_name = 'NET_DISTANCE', 'TRACK_LENGTH', 'CONFINEMENT_RATIO', 'SPEED_MEDIAN AND OR MEAN, ETC 
 
 
 """def histogram_cells_distance(df, metric, str):
     
-    # Sort the DataFrame by 'TOTAL_DISTANCE' in ascending order
+    # Sort the DataFrame by 'TRACK_LENGTH' in ascending order
     df_sorted = df.sort_values(by=metric)
 
     norm = mcolors.Normalize(vmin=df_sorted["NUM_FRAMES"].min(), vmax=df_sorted["NUM_FRAMES"].max())
@@ -441,7 +441,7 @@ Track_stats_thresholded_at_10th_percentile, Track_stats_thresholded_at_20th_perc
     # Loop through each row to plot each cell's data
     for idx, row in df_sorted.iterrows():
         artificial_id = row["Artificial_ID"]
-        total_distance = row[metric]
+        track_length = row[metric]
         num_frames = row["NUM_FRAMES"]
 
         # Get the color based on the number of frames using the viridis colormap
@@ -450,14 +450,14 @@ Track_stats_thresholded_at_10th_percentile, Track_stats_thresholded_at_20th_perc
         # Plot the "chimney" or vertical line
         ax.vlines(
             x=artificial_id,  # X position for the cell
-            ymin=total_distance,  # Starting point of the line (y position)
-            ymax=total_distance + num_frames,  # End point based on number of frames (height)
+            ymin=track_length,  # Starting point of the line (y position)
+            ymax=track_length + num_frames,  # End point based on number of frames (height)
             color=line_color,
             linewidth=width,
             )
 
         ax.hlines(
-            y=total_distance,  # Y position for the lavender line (starting distance)
+            y=track_length,  # Y position for the lavender line (starting distance)
             xmin=artificial_id - (width - 5.850),  # Start a little to the left of the main line
             xmax=artificial_id + (width - 5.795),  # End a little to the right of the main line
             color="lavender",  # Color of the small line
@@ -468,7 +468,7 @@ Track_stats_thresholded_at_10th_percentile, Track_stats_thresholded_at_20th_perc
         # Add the mean number of frames as text above each chimney
         ax.text(
         artificial_id,  # X position (same as the chimney)
-        total_distance + num_frames + 1,  # Y position (slightly above the chimney)
+        track_length + num_frames + 1,  # Y position (slightly above the chimney)
         f"{round(num_frames)}",  # The text to display (formatted mean)
         ha='center',  # Horizontal alignment center
         va='bottom',  # Vertical alignment bottom
@@ -521,7 +521,7 @@ Track_stats_thresholded_at_10th_percentile, Track_stats_thresholded_at_20th_perc
     plt.savefig(op.join(save_path, f"02f_Histogram_{str}_distance_traveled_per_cell.png"))
     # plt.show()
 # histogram_cells_distance(Track_stats3_df, 'NET_DISTANCE', 'Net')
-# histogram_cells_distance(Track_stats3_df, 'TOTAL_DISTANCE', 'Total')"""
+# histogram_cells_distance(Track_stats3_df, 'TRACK_LENGTH', 'Total')"""
 
 """def histogram_nth_percentile_distance(df, metric, num_groups, percentiles, str, threshold):
 
@@ -632,17 +632,17 @@ Track_stats_thresholded_at_10th_percentile, Track_stats_thresholded_at_20th_perc
     # Show the plot
     plt.savefig((op.join(save_path, f"02f_Histogram_{str}_distance_traveled_{percentiles}th_percentiles{threshold}.png")))
     # plt.show()
-histogram_nth_percentile_distance(Track_stats3_df, 'TOTAL_DISTANCE', 20, 5, 'Total', None)
-histogram_nth_percentile_distance(Track_stats3_df, 'TOTAL_DISTANCE', 100, 1, 'Total', None)
+histogram_nth_percentile_distance(Track_stats3_df, 'TRACK_LENGTH', 20, 5, 'Total', None)
+histogram_nth_percentile_distance(Track_stats3_df, 'TRACK_LENGTH', 100, 1, 'Total', None)
 histogram_nth_percentile_distance(Track_stats3_df, 'NET_DISTANCE', 20, 5, 'Net', None)
 histogram_nth_percentile_distance(Track_stats3_df, 'NET_DISTANCE', 100, 1, 'Net', None)
-# histogram_nth_percentile_distance(Track_stats_thresholded_at_20th_percentile, 'TOTAL_DISTANCE', 20, 5, 'Total', 'thresholded_at_20th_percentile') # 20th
+# histogram_nth_percentile_distance(Track_stats_thresholded_at_20th_percentile, 'TRACK_LENGTH', 20, 5, 'Total', 'thresholded_at_20th_percentile') # 20th
 # histogram_nth_percentile_distance(Track_stats_thresholded_at_20th_percentile, 'NET_DISTANCE', 20, 5, 'Net', 'thresholded_at_20th_percentile')
-# histogram_nth_percentile_distance(Track_stats_thresholded_at_40th_percentile, 'TOTAL_DISTANCE', 20, 5, 'Total', 'thresholded_at_40th_percentile') # 40th
+# histogram_nth_percentile_distance(Track_stats_thresholded_at_40th_percentile, 'TRACK_LENGTH', 20, 5, 'Total', 'thresholded_at_40th_percentile') # 40th
 # histogram_nth_percentile_distance(Track_stats_thresholded_at_40th_percentile, 'NET_DISTANCE', 20, 5, 'Net', 'thresholded_at_40th_percentile')
-# histogram_nth_percentile_distance(Track_stats_thresholded_at_60th_percentile, 'TOTAL_DISTANCE', 20, 5, 'Total', 'thresholded_at_60th_percentile') # 60th
+# histogram_nth_percentile_distance(Track_stats_thresholded_at_60th_percentile, 'TRACK_LENGTH', 20, 5, 'Total', 'thresholded_at_60th_percentile') # 60th
 # histogram_nth_percentile_distance(Track_stats_thresholded_at_60th_percentile, 'NET_DISTANCE', 20, 5, 'Net', 'thresholded_at_60th_percentile')
-# histogram_nth_percentile_distance(Track_stats_thresholded_at_80th_percentile, 'TOTAL_DISTANCE', 20, 5, 'Total', 'thresholded_at_80th_percentile') # 80th
+# histogram_nth_percentile_distance(Track_stats_thresholded_at_80th_percentile, 'TRACK_LENGTH', 20, 5, 'Total', 'thresholded_at_80th_percentile') # 80th
 # histogram_nth_percentile_distance(Track_stats_thresholded_at_80th_percentile, 'NET_DISTANCE', 20, 5, 'Net', 'thresholded_at_80th_percentile')"""
 
 def donut(df, ax, outer_radius, inner_radius, kde_bw):
