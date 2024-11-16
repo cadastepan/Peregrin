@@ -1,7 +1,7 @@
 # Peregrin
 
 ## Libraries
-Importing libraries and abbreviating functions:
+Importing **libraries** and abbreviating **functions**:
 ```
 import pandas as pd
 import numpy as np
