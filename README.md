@@ -29,8 +29,9 @@ from scipy.signal import savgol_filter
 ```
 
 ## Input and Output paths
-Defining the data input - assigning the data file's path to a variable "input_file". _If a folder on the Bryjalab server is selected, the user must be logged in while running the script. Also, just a reminder not to forget about activating the VPN connection when working from home ;)_
-Defining the analysis's output - assigning a folder path to a variable "save_path" into which all the files created will be saved.
+Defining the data **input** - assigning the data file's path to a variable "input_file". *If a folder on the Bryjalab server is selected, the user must be logged in while running the script. Also, just a reminder not to forget about activating the VPN connection when working from home ;)*
+
+Defining the analysis's **output** - assigning a folder path to a variable "save_path" into which all the files created will be saved.
 ```
 # INPUT FILE:
 input_file = r"Z:\Shared\bryjalab\users\Branislav\Collagen Migration Assay DATA\data 23-7-24\run1\position_4!\C2-position_spots.csv"
