@@ -33,10 +33,10 @@ Defining the data input - assigning the data file's path to a variable "input_fi
 Defining the analysis's output - assigning a folder path to a variable "save_path" into which all the files created will be saved.
 
 
-```
+'
 # INPUT FILE:
 input_file = r"Z:\Shared\bryjalab\users\Branislav\Collagen Migration Assay DATA\data 23-7-24\run1\position_4!\C2-position_spots.csv"
 
 # SAVE PATH:
 save_path = r"Z:\Shared\bryjalab\users\Branislav\Collagen Migration Assay DATA\data 23-7-24\run1\position_4!\analysed"
-```
+'
