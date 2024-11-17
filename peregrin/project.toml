@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "peregrin"
-version = "0.0.2"
+version = "0.0.3"
 authors = [{name = "Branislav Modriansky", email = "modrianskybranislav@gmail.com"}]
 classifiers = [
   "Development Status :: 3 - Alpha",
