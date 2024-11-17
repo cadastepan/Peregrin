@@ -40,11 +40,13 @@ Defining the analysis's **output** - assigning a folder path to a variable "save
     # save path:
     save_path = r"Z:\Shared\bryjalab\users\Branislav\Collagen Migration Assay DATA\data 23-7-24\run1\position_4!\analysed"
 
+---
 
 Loading the *.csv* **input file** as a DataFrame into the "df" variable:
 
     df = pd.read_csv(input_file)
 
+---
 
 *While working on the script, it may happen often that you'd like to modify the output directories, change titles or names of the files created and saved, or you might even fall out of love with certain plots, removing their code from the script completely. So with keeping this in mind, it is to be expected that constantly remodeling and rerunning the analysis on the same dataset will cause chaos.. For this reason, there is a **very sketchy function** you can use, if you dare :smiling_imp:.*
 
@@ -52,4 +54,5 @@ This ***very sketchy function* deletes all files** - though not directories *(fo
 
     FilesAndFolders.clean(folder)
 
+---
 
