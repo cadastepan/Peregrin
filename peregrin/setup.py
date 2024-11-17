@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 # This call to setup() does all the work
 setup(
     name="peregrin",
-    version="0.0.2",
+    version="0.0.3",
     description="Demo",
     author="Branislav Modriansky",
     author_email="modrinaskybranislav@gmail.com",
