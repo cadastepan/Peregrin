@@ -23,11 +23,6 @@ class FilesAndFolders:
 
 class PlotParams:
 
-    # def __init__(self, df):
-    #     self.df = df
-
     @staticmethod
-    def x_span(df):
-        index = 0.08 # definition of an index for x_span calculation
-        num_elements = len(df) # count rows = elements in a dataframe
-        return num_elements * index
+    def x_span(df, index=0.25):
+        return len(df) * index
