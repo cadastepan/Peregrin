@@ -1,8 +1,6 @@
 shiny
-matplotlib
-numpy
 pandas
+numpy
+matplotlib
 scipy
-scikit-learn
 peregrin
-io
