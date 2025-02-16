@@ -1,0 +1,8 @@
+shiny
+matplotlib
+numpy
+pandas
+scipy
+scikit-learn
+peregrin
+io
