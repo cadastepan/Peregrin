@@ -771,17 +771,9 @@ with ui.nav_panel("Tracks"):
                 def plot2():
                     return visualize_smoothened_tracks(df=Spot_stats_df.get(), df2=Track_stats_df.get(), threshold=None, smoothing_type='moving_average', smoothing_index=50, lw=0.8)
 
-            with ui.card():
-                ui.card_header("Smoothened tracks visualization")
-                @render.plot
 
 
 
-
-
-
-        with ui.nav_panel("Tests"):
-            "content"
 
 
 
