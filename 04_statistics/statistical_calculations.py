@@ -275,10 +275,6 @@ speeds_per_cell = calculate_speed(Spot_stats, 'TRACK_ID')
 
 Track_stats_dfs = [tracks_lengths_and_net_distances_df, confinement_ratios_df, track_directions_df, frames_per_track, speeds_per_cell]
 Track_stats = merge_dfs(Track_stats_dfs, on='TRACK_ID')
-
-# weighted_directions_per_each_cell = calculate_weighted_directions_per_cell(Track_stats)
-# print(weighted_directions_per_each_cell.head())
-
 Track_stats.to_csv('Track_stats.csv', index=False) # Save the Track_stats created DataFrame into a newly created Track_stats_debugging.csv file
 
 
