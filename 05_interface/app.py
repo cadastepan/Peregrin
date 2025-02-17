@@ -751,7 +751,6 @@ def df_gaussian_donut(df, metric, subject, heatmap, weight, threshold):
 
 
 
-
 # ===========================================================================================================================================================================================================================================================================
 # Tracks panel
 # Track visualization
@@ -759,7 +758,7 @@ def df_gaussian_donut(df, metric, subject, heatmap, weight, threshold):
 # Statistical testing
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-with ui.nav_panel("Track stats"):
+with ui.nav_panel("Visualisation"):
 
 
     # ===========================================================================================================================================================================================================================================================================
@@ -944,243 +943,265 @@ with ui.nav_panel("Track stats"):
     # Executing plotting functions and displaying the plots
     # ----------------------------------------------------------------
 
-    with ui.navset_card_tab():
-        with ui.nav_panel("Visualization"):
-            with ui.layout_columns(
-                col_widths=(6,6,6,6),
-                row_heights=(3, 4),	
-            ):
-  
-                with ui.card(full_screen=True):
-                    ui.card_header("Full tracks visualization")
-                    @render.plot
-                    def plot1():
-                        return visualize_full_tracks(
-                            df=Spot_stats_df.get(), 
-                            df2=Track_stats_df.get(), 
-                            threshold=None, 
-                            lw=0.5
-                            )
-
-                with ui.card(full_screen=True):
-                    ui.card_header("Smoothened tracks visualization")
-                    @render.plot
-                    def plot2():
-                        return visualize_smoothened_tracks(
-                            df=Spot_stats_df.get(), 
-                            df2=Track_stats_df.get(), 
-                            threshold=None, 
-                            smoothing_type='moving_average', 
-                            smoothing_index=50, 
-                            lw=0.8
-                            )
-                    
-                with ui.card(full_screen=True):  
-                    ui.card_header("Directionality")
-                    with ui.layout_column_wrap(width=1 / 2):
-                        with ui.card(full_screen=False):
-                            ui.card_header("Scaled by confinement ratio")
+    with ui.navset_card_pill():
+        with ui.nav_panel("Tracks"):
+            with ui.navset_card_tab(id="tab1"):
+                with ui.nav_panel("Track visualisation"):
+                    with ui.layout_columns(
+                        col_widths=(6,6,6,6),
+                        row_heights=(3, 4),	
+                    ):
+        
+                        with ui.card(full_screen=True):
+                            ui.card_header("Raw tracks visualization")
                             @render.plot
-                            def plot3():
-                                figure = migration_directions_with_kde_plus_mean(
-                                    df=Track_stats_df.get(), 
-                                    metric='MEAN_DIRECTION_RAD', 
-                                    subject='Cells', 
-                                    scaling_metric='CONFINEMENT_RATIO', 
-                                    cmap_normalization_metric=None, 
-                                    cmap=cmap_cells, 
-                                    threshold=None
+                            def plot1():
+                                return visualize_full_tracks(
+                                    df=Spot_stats_df.get(), 
+                                    df2=Track_stats_df.get(), 
+                                    threshold=None, 
+                                    lw=0.5
                                     )
-                                return figure
-                            
-                            @render.download(label="Download", filename="Track directionality.png")
-                            def download1():
-                                figure = migration_directions_with_kde_plus_mean(
-                                    df=Track_stats_df.get(), 
-                                    metric='MEAN_DIRECTION_RAD', 
-                                    subject='Cells', 
-                                    scaling_metric='CONFINEMENT_RATIO', 
-                                    cmap_normalization_metric=None, 
-                                    cmap=cmap_cells, 
-                                    threshold=None
+
+                        with ui.card(full_screen=True):
+                            ui.card_header("Smoothened tracks visualization")
+                            @render.plot
+                            def plot2():
+                                return visualize_smoothened_tracks(
+                                    df=Spot_stats_df.get(), 
+                                    df2=Track_stats_df.get(), 
+                                    threshold=None, 
+                                    smoothing_type='moving_average', 
+                                    smoothing_index=50, 
+                                    lw=0.8
                                     )
-                                with io.BytesIO() as buf:
-                                    figure.savefig(buf, format="png", dpi=300)
-                                    yield buf.getvalue()
+
+                with ui.nav_panel("Directionality plots"):
+                    with ui.layout_columns():
+                        with ui.card(full_screen=True):  
+                            ui.card_header("Directionality")
+                            with ui.layout_column_wrap(width=1 / 2):
+                                with ui.card(full_screen=False):
+                                    ui.card_header("Scaled by confinement ratio")
+                                    @render.plot
+                                    def plot3():
+                                        figure = migration_directions_with_kde_plus_mean(
+                                            df=Track_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD', 
+                                            subject='Cells', 
+                                            scaling_metric='CONFINEMENT_RATIO', 
+                                            cmap_normalization_metric=None, 
+                                            cmap=cmap_cells, 
+                                            threshold=None
+                                            )
+                                        return figure
+                                    
+                                    @render.download(label="Download", filename="Track directionality.png")
+                                    def download1():
+                                        figure = migration_directions_with_kde_plus_mean(
+                                            df=Track_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD', 
+                                            subject='Cells', 
+                                            scaling_metric='CONFINEMENT_RATIO', 
+                                            cmap_normalization_metric=None, 
+                                            cmap=cmap_cells, 
+                                            threshold=None
+                                            )
+                                        with io.BytesIO() as buf:
+                                            figure.savefig(buf, format="png", dpi=300)
+                                            yield buf.getvalue()
+                                    
+                                    
+                                
+                                with ui.card(full_screen=False):
+                                    ui.card_header("Scaled by net distance")
+                                    @render.plot
+                                    def plot4():
+                                        figure = migration_directions_with_kde_plus_mean(
+                                            df=Track_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD', 
+                                            subject='Cells', 
+                                            scaling_metric='NET_DISTANCE', 
+                                            cmap_normalization_metric=None, 
+                                            cmap=cmap_cells, 
+                                            threshold=None
+                                            )
+                                        return figure
+
+                                    @render.download(label="Download", filename="Track directionality.png")
+                                    def download2():
+                                        figure = migration_directions_with_kde_plus_mean(
+                                            df=Track_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD', 
+                                            subject='Cells', 
+                                            scaling_metric='NET_DISTANCE', 
+                                            cmap_normalization_metric=None, 
+                                            cmap=cmap_cells, 
+                                            threshold=None
+                                            )
+                                        with io.BytesIO() as buf:
+                                            figure.savefig(buf, format="png", dpi=300)
+                                            yield buf.getvalue()
                             
-                            
+                        with ui.card(full_screen=True):
+                            ui.card_header("Migration heatmaps")
+                            with ui.layout_column_wrap(width=1 / 2):
+                                with ui.card(full_screen=False):
+                                    ui.card_header("Standard")        
+                                    @render.plot
+                                    def plot5():
+                                        return df_gaussian_donut(
+                                            df=Track_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD', 
+                                            subject='Cells', 
+                                            heatmap='inferno', 
+                                            weight=None, 
+                                            threshold=None
+                                            )
+                                    
+                                    @render.download(label="Download", filename="Cell migration heatmap.png")
+                                    def download3():
+                                        figure = df_gaussian_donut(
+                                            df=Track_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD', 
+                                            subject='Cells', 
+                                            heatmap='inferno', 
+                                            weight=None, 
+                                            threshold=None
+                                            )
+                                        with io.BytesIO() as buf:
+                                            figure.savefig(buf, format="png", dpi=300)
+                                            yield buf.getvalue()
+
+                                with ui.card(full_screen=False):
+                                    ui.card_header("Weighted")
+                                    with ui.value_box(
+                                    full_screen=False,
+                                    theme="text-red"
+                                    ):
+                                        ""
+                                        "Currently unavailable"
+                                        ""
+                
+        with ui.nav_panel("Frames"):
+            def histogram_frame_speed(df):
+                frames = df['POSITION_T'][1:-1]
+                mean_speed = df['SPEED_MEAN'][1:-1]
+                median_speed = df['SPEED_MEDIAN'][1:-1]
+
+                # Apply Savitzky-Golay filter for smoothing
+                mean_speed_smooth = savgol_filter(mean_speed, window_length=11, polyorder=1)
+                median_speed_smooth = savgol_filter(median_speed, window_length=11, polyorder=1)
+
+                # Plotting
+                plt.figure(figsize=(10, 6))
+                plt.plot(frames, mean_speed, '.', label='Mean Speed', alpha=0.5)
+                plt.plot(frames, median_speed, '.', label='Median Speed', alpha=0.5)
+                plt.plot(frames, mean_speed_smooth, '-', label='Smoothed Mean Speed', linewidth=2)
+                plt.plot(frames, median_speed_smooth, '-', label='Smoothed Median Speed', linewidth=2)
+
+                # Set x-axis to start at 0
+                plt.xlim(left=0)
+                plt.ylim(bottom=0)
+
+                plt.xlabel(r'Time $\it{[min]}$')
+                plt.ylabel(r'Speed $\it{[μm]}$')
+                plt.title('Mean and Median Speed per Frame')
+                plt.legend()
+                plt.grid(True)
+                # plt.show()
+                return plt.gcf()
+            
+            with ui.navset_card_tab(id="tab2"):
+                with ui.nav_panel("Histograms"):
+                    with ui.layout_columns(
+                        col_widths={"sm": (12,6,6)},
+                        row_heights=(3,4),
+                        # height="700px",
+                    ):
                         
-                        with ui.card(full_screen=False):
-                            ui.card_header("Scaled by net distance")
+                        with ui.card(full_screen=True):
+                            ui.card_header("Speed histogram")
                             @render.plot
-                            def plot4():
-                                return migration_directions_with_kde_plus_mean(
-                                    df=Track_stats_df.get(), 
-                                    metric='MEAN_DIRECTION_RAD', 
-                                    subject='Cells', 
-                                    scaling_metric='NET_DISTANCE', 
-                                    cmap_normalization_metric=None, 
-                                    cmap=cmap_cells, 
-                                    threshold=None
-                                    )
-                    
-                with ui.card(full_screen=True):
-                    ui.card_header("Migration heatmaps")
-                    with ui.layout_column_wrap(width=1 / 2):
-                        with ui.card(full_screen=False):
-                            ui.card_header("Standard")        
-                            @render.plot
-                            def plot5():
-                                return df_gaussian_donut(
-                                    df=Track_stats_df.get(), 
-                                    metric='MEAN_DIRECTION_RAD', 
-                                    subject='Cells', 
-                                    heatmap='inferno', 
-                                    weight=None, 
-                                    threshold=None
-                                    )
-                            
-                            @render.download(label="Download", filename="Cell migration heatmap.png")
-                            def download2():
-                                figure = df_gaussian_donut(
-                                    df=Track_stats_df.get(), 
-                                    metric='MEAN_DIRECTION_RAD', 
-                                    subject='Cells', 
-                                    heatmap='inferno', 
-                                    weight=None, 
-                                    threshold=None
-                                    )
+                            def plot7():
+                                figure = histogram_frame_speed(df=Frame_stats_df.get())
+                                return figure
+
+                            @render.download(label="Download", filename="Track directionality.png")
+                            def download4():
+                                figure = histogram_frame_speed(df=Frame_stats_df.get())
                                 with io.BytesIO() as buf:
                                     figure.savefig(buf, format="png", dpi=300)
                                     yield buf.getvalue()
 
-                        with ui.card(full_screen=False):
-                            ui.card_header("Weighted")
-                            with ui.value_box(
-                            full_screen=False,
-                            theme="text-red"
-                            ):
-                                ""
-                                "Currently unavailable"
-                                ""
-                            
-    
-
-    # ===========================================================================================================================================================================================================================================================================
-    # Statistical testing for tracks
-    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+                with ui.nav_panel("Directionality plots"):
+                    with ui.layout_columns():
+                        with ui.card(full_screen=True):
+                            ui.card_header("Directionality")
+                            with ui.layout_column_wrap(width=1 / 2):
+                                with ui.card(full_screen=False):
+                                    ui.card_header("Standard - Scaled by mean distance")
+                                    @render.plot
+                                    def plot8():
+                                        return migration_directions_with_kde_plus_mean(
+                                            df=Frame_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD', 
+                                            subject='Frames (weighted)', 
+                                            scaling_metric='MEAN_DISTANCE', 
+                                            cmap_normalization_metric='POSITION_T', 
+                                            cmap=cmap_frames, 
+                                            threshold=None
+                                            )
+                                with ui.card(full_screen=False):
+                                    ui.card_header("Weighted - Scaled by mean distance")
+                                    @render.plot
+                                    def plot9():
+                                        return migration_directions_with_kde_plus_mean(
+                                            df=Frame_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
+                                            subject='Frames (weighted)', 
+                                            scaling_metric='MEAN_DISTANCE', 
+                                            cmap_normalization_metric='POSITION_T', 
+                                            cmap=cmap_frames, 
+                                            threshold=None
+                                            )
+                
+                        with ui.card(full_screen=True):
+                            ui.card_header("Migration heatmaps")
+                            with ui.layout_column_wrap(width=1 / 2):
+                                with ui.card(full_screen=False):
+                                    ui.card_header("Standard")        
+                                    @render.plot
+                                    def plot10():
+                                        return df_gaussian_donut(
+                                            df=Frame_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD', 
+                                            subject='Frames', 
+                                            heatmap='viridis', 
+                                            weight=None, 
+                                            threshold=None
+                                            )
+                                with ui.card(full_screen=False):
+                                    ui.card_header("Weighted")
+                                    @render.plot
+                                    def plot11():
+                                        return df_gaussian_donut(
+                                            df=Frame_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
+                                            subject='Frames', 
+                                            heatmap='viridis', 
+                                            weight='mean distance traveled', 
+                                            threshold=None
+                                            )
 
 
 # ===========================================================================================================================================================================================================================================================================
 # Frame panel
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-with ui.nav_panel("Frame stats"):
+# with ui.nav_panel("Stats"):
 
 
     # ===========================================================================================================================================================================================================================================================================
     # Plotting functions
     # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    def histogram_frame_speed(df):
-        frames = df['POSITION_T'][1:-1]
-        mean_speed = df['SPEED_MEAN'][1:-1]
-        median_speed = df['SPEED_MEDIAN'][1:-1]
-
-        # Apply Savitzky-Golay filter for smoothing
-        mean_speed_smooth = savgol_filter(mean_speed, window_length=11, polyorder=1)
-        median_speed_smooth = savgol_filter(median_speed, window_length=11, polyorder=1)
-
-        # Plotting
-        plt.figure(figsize=(10, 6))
-        plt.plot(frames, mean_speed, '.', label='Mean Speed', alpha=0.5)
-        plt.plot(frames, median_speed, '.', label='Median Speed', alpha=0.5)
-        plt.plot(frames, mean_speed_smooth, '-', label='Smoothed Mean Speed', linewidth=2)
-        plt.plot(frames, median_speed_smooth, '-', label='Smoothed Median Speed', linewidth=2)
-
-        # Set x-axis to start at 0
-        plt.xlim(left=0)
-        plt.ylim(bottom=0)
-
-        plt.xlabel(r'Time $\it{[min]}$')
-        plt.ylabel(r'Speed $\it{[μm]}$')
-        plt.title('Mean and Median Speed per Frame')
-        plt.legend()
-        plt.grid(True)
-        # plt.show()
-        return plt.gcf()
-
-
-    with ui.navset_card_tab():
-        with ui.nav_panel("Visualization"):
-            with ui.layout_columns(
-                col_widths={"sm": (12,6,6)},
-                row_heights=(3,4),
-                # height="700px",
-            ):
-                
-                with ui.card(full_screen=True):
-                    ui.card_header("Speed histogram")
-                    @render.plot
-                    def plot7():
-                        return histogram_frame_speed(df=Frame_stats_df.get())
-
-                with ui.card(full_screen=True):
-                    ui.card_header("Directionality")
-                    with ui.layout_column_wrap(width=1 / 2):
-                        with ui.card(full_screen=False):
-                            ui.card_header("Standard - Scaled by mean distance")
-                            @render.plot
-                            def plot8():
-                                return migration_directions_with_kde_plus_mean(
-                                    df=Frame_stats_df.get(), 
-                                    metric='MEAN_DIRECTION_RAD', 
-                                    subject='Frames (weighted)', 
-                                    scaling_metric='MEAN_DISTANCE', 
-                                    cmap_normalization_metric='POSITION_T', 
-                                    cmap=cmap_frames, 
-                                    threshold=None
-                                    )
-                        with ui.card(full_screen=False):
-                            ui.card_header("Weighted - Scaled by mean distance")
-                            @render.plot
-                            def plot9():
-                                return migration_directions_with_kde_plus_mean(
-                                    df=Frame_stats_df.get(), 
-                                    metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
-                                    subject='Frames (weighted)', 
-                                    scaling_metric='MEAN_DISTANCE', 
-                                    cmap_normalization_metric='POSITION_T', 
-                                    cmap=cmap_frames, 
-                                    threshold=None
-                                    )
-                
-                with ui.card(full_screen=True):
-                    ui.card_header("Migration heatmaps")
-                    with ui.layout_column_wrap(width=1 / 2):
-                        with ui.card(full_screen=False):
-                            ui.card_header("Standard")        
-                            @render.plot
-                            def plot10():
-                                return df_gaussian_donut(
-                                    df=Frame_stats_df.get(), 
-                                    metric='MEAN_DIRECTION_RAD', 
-                                    subject='Frames', 
-                                    heatmap='viridis', 
-                                    weight=None, 
-                                    threshold=None
-                                    )
-                        with ui.card(full_screen=False):
-                            ui.card_header("Weighted")
-                            @render.plot
-                            def plot11():
-                                return df_gaussian_donut(
-                                    df=Frame_stats_df.get(), 
-                                    metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
-                                    subject='Frames', 
-                                    heatmap='viridis', 
-                                    weight='mean distance traveled', 
-                                    threshold=None
-                                    )
-    
