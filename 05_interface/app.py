@@ -23,7 +23,6 @@ ui.page_opts(
     )
 
 
-
 # ===========================================================================================================================================================================================================================================================================
 # Creating reactive variables for dataframe storage
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -36,9 +35,11 @@ Frame_stats_df = reactive.value()
 
 
 # ===========================================================================================================================================================================================================================================================================
+# ===========================================================================================================================================================================================================================================================================
 # Data panel
 # Reading a selected CSV file and cleaning it
 # Extracting separate dataframes
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 with ui.nav_panel("Data"):  # Data panel
@@ -536,6 +537,47 @@ with ui.nav_panel("Data"):  # Data panel
 
 
 
+
+# ===========================================================================================================================================================================================================================================================================
+# ===========================================================================================================================================================================================================================================================================
+# Sidebar
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+with ui.sidebar(open="open",position="right", bg="f8f8f8"): 
+
+    def dataframe_thresholding(df, column_name, values=[]):
+        if len(values) != 2:
+            raise ValueError("Values must be a list containing exactly two elements: [lower_percentile, upper_percentile]")
+        
+        lower_percentile, upper_percentile = values
+        
+        # Compute the actual threshold values
+        lower_bound = np.percentile(df[column_name], lower_percentile)
+        upper_bound = np.percentile(df[column_name], upper_percentile)
+        
+        # Apply thresholding
+        df[column_name] = np.clip(df[column_name], lower_bound, upper_bound)
+        
+        return df
+
+    ui.input_slider("slider", "Thresholding", min=0, max=100, value=[0, 100])  
+    
+    @reactive.calc
+    def value():
+        return input.slider()
+
+    def thresholding():
+        values = []
+        values = value.get()
+        return dataframe_thresholding(df=Track_stats_df.get(), column_name="", values)
+    
+
+
+
+
+
 # ===========================================================================================================================================================================================================================================================================
 # Optics parameters
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -751,15 +793,20 @@ def df_gaussian_donut(df, metric, subject, heatmap, weight, threshold):
 
 
 
+
+# ===========================================================================================================================================================================================================================================================================
 # ===========================================================================================================================================================================================================================================================================
 # Tracks panel
 # Track visualization
 # Plotting track statistics
 # Statistical testing
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 with ui.nav_panel("Visualisation"):
 
+
+    
 
     # ===========================================================================================================================================================================================================================================================================
     # Plotting functions
@@ -945,6 +992,7 @@ with ui.nav_panel("Visualisation"):
 
     with ui.navset_card_pill():
         with ui.nav_panel("Tracks"):
+
             with ui.navset_card_tab(id="tab1"):
                 with ui.nav_panel("Track visualisation"):
                     with ui.layout_columns(
@@ -1082,6 +1130,152 @@ with ui.nav_panel("Visualisation"):
                                         ""
                                         "Currently unavailable"
                                         ""
+
+                with ui.nav_panel("Whole dataset histograms"):
+                    def histogram_cells_distance(df, metric, str):
+                        # Sort the DataFrame by 'TRACK_LENGTH' in ascending order
+                        df_sorted = df.sort_values(by=metric)
+
+                        norm = mcolors.Normalize(vmin=df_sorted["NUM_FRAMES"].min(), vmax=df_sorted["NUM_FRAMES"].max())
+                        cmap = plt.colormaps["ocean_r"]
+
+                        # Create new artificial IDs for sorting purposes (1 for lowest distance, N for highest)
+                        df_sorted["Artificial_ID"] = range(1, len(df_sorted) + 1)
+
+                        x_span = PlotParams.x_span(df_sorted)
+
+                        # Create the figure and axis for the plot
+                        fig, ax = plt.subplots(figsize=(x_span, 8))
+                        fig.set_tight_layout(True)
+                        width = 6
+
+                        # Loop through each row to plot each cell's data
+                        for idx, row in df_sorted.iterrows():
+                            artificial_id = row["Artificial_ID"]
+                            track_length = row[metric]
+                            num_frames = row["NUM_FRAMES"]
+
+                            # Get the color based on the number of frames using the viridis colormap
+                            line_color = cmap(norm(num_frames))
+
+                            # Plot the "chimney" or vertical line
+                            ax.vlines(
+                                x=artificial_id,  # X position for the cell
+                                ymin=track_length,  # Starting point of the line (y position)
+                                ymax=track_length + num_frames,  # End point based on number of frames (height)
+                                color=line_color,
+                                linewidth=width,
+                                )
+
+                            plt.plot(artificial_id, track_length, '_', zorder=5, color="lavender")
+
+                            # Add the mean number of frames as text above each chimney
+                            ax.text(
+                            artificial_id,  # X position (same as the chimney)
+                            track_length + num_frames + 1,  # Y position (slightly above the chimney)
+                            f"{round(num_frames)}",  # The text to display (formatted mean)
+                            ha='center',  # Horizontal alignment center
+                            va='bottom',  # Vertical alignment bottom
+                            fontsize=6,  # Adjust font size if necessary
+                            color='black',  # Color of the text
+                            style='italic'  # Italicize the text
+                            )
+
+                            x = int(row['Artificial_ID'])
+
+                            plt.xticks(range(x), rotation=90) # add loads of ticks
+                            plt.grid(which='major', color='#DDDDDD', linewidth=0.8)
+                            plt.grid(which='minor', color='#EEEEEE', linestyle=':', linewidth=0.5)
+
+
+                        max_y = df_sorted[metric].max()
+                        num_x_values = df_sorted[metric].count()
+
+                        # Adjust the plot aesthetics
+                        plt.tick_params(axis='x', rotation=60)
+                        plt.tick_params(axis='y', labelsize=8)
+                        plt.xticks(range(num_x_values)) # add loads of ticks
+                        plt.grid(which='major', color='#DDDDDD', linewidth=0.8)
+                        plt.grid(which='minor', color='#EEEEEE', linestyle=':', linewidth=0.5)
+
+                        # Set ticks, labels and title
+                        ax.set_xticks(range(1, num_x_values + 1))
+                        ax.set_yticks(np.arange(0, max_y + 1, 10))
+                        ax.set_xlabel(f"Cells (sorted by {str} distance)")
+                        ax.set_ylabel(f"{str} distance traveled [μm]")
+                        ax.set_title(f"{str} Distance Traveled by Cells\nWith Length Representing Number of Frames")
+
+                        # Invert x-axis so the highest distance is on the left
+                        plt.gca().invert_xaxis()
+
+                        ax.set_xlim(right=0, left=num_x_values+1)  # Adjust the left limit as needed
+
+                        # Show the plot
+                        # plt.savefig(op.join(save_path, f"02f_Histogram_{str}_distance_traveled_per_cell.png"))
+                        # plt.show()
+
+                        return plt.gcf()
+                    
+                    with ui.layout_column_wrap(width=2 / 2):
+                        with ui.card(full_screen=False): 
+                            with ui.layout_columns(
+                                col_widths=(12,12)
+                            ): 
+                                with ui.card(full_screen=True):
+                                    ui.card_header("Net distances travelled")
+                                    @render.plot(
+                                            width=3600,
+                                            height=500
+                                            )
+                                    def plot6():
+                                        figure = histogram_cells_distance(
+                                            df=Track_stats_df.get(), 
+                                            metric='NET_DISTANCE', 
+                                            str='Net'
+                                            )
+                                        return figure
+                                    
+                                    @render.download(label="Download", filename="Net distances travelled.png")
+                                    def download11():
+                                        figure = histogram_cells_distance(
+                                            df=Track_stats_df.get(), 
+                                            metric='NET_DISTANCE', 
+                                            str='Net'
+                                            )
+                                        with io.BytesIO() as buf:
+                                            figure.savefig(buf, format="png", dpi=300)
+                                            yield buf.getvalue()
+
+                                with ui.card(full_screen=True):
+                                    ui.card_header("Track lengths")
+                                    @render.plot(
+                                            width=3800,
+                                            height=1000
+                                            )
+                                    def plot12():
+                                        figure = histogram_cells_distance(
+                                            df=Track_stats_df.get(), 
+                                            metric='TRACK_LENGTH', 
+                                            str='Total'
+                                            )
+                                        return figure
+                                    
+                                    @render.download(
+                                            label="Download", 
+                                            filename="Track lengths.png"
+                                            )
+                                    def download12():
+                                        figure = histogram_cells_distance(
+                                            df=Track_stats_df.get(), 
+                                            metric='TRACK_LENGTH', 
+                                            str='Total'
+                                            )
+                                        with io.BytesIO() as buf:
+                                            figure.savefig(buf, format="png", dpi=300)
+                                            yield buf.getvalue()
+                                    
+
+
                 
         with ui.nav_panel("Frames"):
             def histogram_frame_speed(df):
@@ -1205,3 +1399,10 @@ with ui.nav_panel("Visualisation"):
     # ===========================================================================================================================================================================================================================================================================
     # Plotting functions
     # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+ui.nav_spacer()  
+with ui.nav_control():  
+    ui.input_dark_mode(mode="light")
