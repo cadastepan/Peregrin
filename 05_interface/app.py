@@ -10,6 +10,7 @@ from scipy.signal import savgol_filter
 from peregrin.scripts import PlotParams
 from matplotlib.colors import Normalize
 from scipy.stats import gaussian_kde
+import io
 
 
 # ===========================================================================================================================================================================================================================================================================
@@ -666,10 +667,6 @@ def migration_directions_with_kde_plus_mean(df, metric, subject, scaling_metric,
     ax.set_yticklabels([])  # Remove radial labels
     ax.set_xticklabels([])  # Remove angular labels
 
-    # Save the plot
-    # plt.savefig(f'02c_Plot_directions_of_travel_with_mean_and_kernel_density_estimate_{subject}_{scaling_metric}{threshold}.png', dpi=500)
-    # plt.show()
-
     return plt.gcf()
 
 def donut(df, ax, outer_radius, inner_radius, kde_bw):
@@ -985,7 +982,7 @@ with ui.nav_panel("Track stats"):
                             ui.card_header("Scaled by confinement ratio")
                             @render.plot
                             def plot3():
-                                return migration_directions_with_kde_plus_mean(
+                                figure = migration_directions_with_kde_plus_mean(
                                     df=Track_stats_df.get(), 
                                     metric='MEAN_DIRECTION_RAD', 
                                     subject='Cells', 
@@ -994,6 +991,24 @@ with ui.nav_panel("Track stats"):
                                     cmap=cmap_cells, 
                                     threshold=None
                                     )
+                                return figure
+                            
+                            @render.download(label="Download", filename="Track directionality.png")
+                            def download1():
+                                figure = migration_directions_with_kde_plus_mean(
+                                    df=Track_stats_df.get(), 
+                                    metric='MEAN_DIRECTION_RAD', 
+                                    subject='Cells', 
+                                    scaling_metric='CONFINEMENT_RATIO', 
+                                    cmap_normalization_metric=None, 
+                                    cmap=cmap_cells, 
+                                    threshold=None
+                                    )
+                                with io.BytesIO() as buf:
+                                    figure.savefig(buf, format="png", dpi=300)
+                                    yield buf.getvalue()
+                            
+                            
                         
                         with ui.card(full_screen=False):
                             ui.card_header("Scaled by net distance")
@@ -1024,6 +1039,21 @@ with ui.nav_panel("Track stats"):
                                     weight=None, 
                                     threshold=None
                                     )
+                            
+                            @render.download(label="Download", filename="Cell migration heatmap.png")
+                            def download2():
+                                figure = df_gaussian_donut(
+                                    df=Track_stats_df.get(), 
+                                    metric='MEAN_DIRECTION_RAD', 
+                                    subject='Cells', 
+                                    heatmap='inferno', 
+                                    weight=None, 
+                                    threshold=None
+                                    )
+                                with io.BytesIO() as buf:
+                                    figure.savefig(buf, format="png", dpi=300)
+                                    yield buf.getvalue()
+
                         with ui.card(full_screen=False):
                             ui.card_header("Weighted")
                             with ui.value_box(
