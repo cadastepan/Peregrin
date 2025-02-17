@@ -536,43 +536,233 @@ with ui.nav_panel("Data"):  # Data panel
 
 
 # ===========================================================================================================================================================================================================================================================================
+# Optics parameters
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Definition of micron length per pixel
+microns_per_pixel = 0.7381885238402274 # for 10x lens
+
+# Define the desired dimensions in microns
+x_min, x_max = 0, (1600 * microns_per_pixel)
+y_min, y_max = 0, (1200 * microns_per_pixel)
+x_axe_remainder = x_max-1150
+x_add = 50 - x_axe_remainder
+y_ax_remainder = y_max-850
+x_substract = (x_max - y_max) + (y_ax_remainder - 50)
+
+# Calculate the aspect ratio
+aspect_ratio = x_max / y_max
+
+
+
+# ===========================================================================================================================================================================================================================================================================
+# Globally used callables
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# plot specs
+title_size = 16
+title_size2 = 12
+label_size = 11
+figtext_size = 9
+compass_annotations_size = 15
+figtext_color = 'grey'
+
+# Color maps
+cmap_cells = mcolors.LinearSegmentedColormap.from_list("", ["#9b598910", "#9b181eff"])
+cmap_frames = plt.get_cmap('viridis')
+
+# Functioons
+def migration_directions_with_kde_plus_mean(df, metric, subject, scaling_metric, cmap_normalization_metric, cmap, threshold):
+
+    # Recognizing the presence of a threshold
+    if threshold == None:
+        threshold = '_no_threshold'
+    else:
+        threshold = '_' + threshold
+
+    df_mean_direction = df[metric]
+
+    # Prepare for KDE plot
+    x_kde = np.cos(df_mean_direction)
+    y_kde = np.sin(df_mean_direction)
+    kde = gaussian_kde([x_kde, y_kde])
+
+    # Define the grid for evaluation
+    theta_kde = np.linspace(0, 2 * np.pi, 360)
+    x_grid = np.cos(theta_kde)
+    y_grid = np.sin(theta_kde)
+
+    # Evaluate the KDE on the grid and normalize
+    z_kde = kde.evaluate([x_grid, y_grid])
+    z_kde = z_kde / z_kde.max() * 0.5  # Normalize to fit within the radial limit
+
+    # Calculate the mean direction
+    mean_direction = np.arctan2(np.mean(y_kde), np.mean(x_kde))
+
+    # Start plotting
+    fig, ax = plt.subplots(figsize=(7, 7), subplot_kw={'polar': True})
+
+    # Plot KDE
+    ax.plot(theta_kde, z_kde, label='Circular KDE', color='None', zorder=5)
+    ax.fill(theta_kde, z_kde, alpha=0.25, color='#1b5a9e', zorder=5)
+
+    # Directional Arrows
+    scaling_max = df[scaling_metric].max()
+
+    # Normalization of the color map
+    if cmap_normalization_metric == None:
+        norm = mcolors.Normalize(vmin=0, vmax=1)
+    else:
+        normalization_min = df[cmap_normalization_metric].min()
+        normalization_max = df[cmap_normalization_metric].max()
+        norm = mcolors.Normalize(vmin=normalization_min, vmax=normalization_max)
+
+    # Row itteration
+    for _, row in df.iterrows():
+        scaling_metrics = row[scaling_metric]
+        mean_direction_rad = row[metric]
+        arrow_length = scaling_metrics / scaling_max
+
+        if cmap_normalization_metric == None:
+            color = cmap(norm(arrow_length))
+        else:
+            color = cmap(norm(row[cmap_normalization_metric]))
+
+        if arrow_length == 0:
+            continue  # Skip if the arrow length is zero
+
+        # Dynamically adjust the head size based on arrow_length
+        scaling_factor = 1 / arrow_length if arrow_length != 0 else 1
+        head_width = 0.011 * scaling_factor
+        head_length = 0.013
+
+        ax.arrow(mean_direction_rad, 0, 0, arrow_length, color=color, linewidth=0.75, 
+                head_width=head_width, head_length=head_length, zorder=4)
+
+    # Plot the dashed line in the mean direction
+    ax.plot([mean_direction, mean_direction], [0, 1], linestyle='--', color='darkslateblue', alpha=0.93, linewidth=2.5, zorder=6)
+
+    # Hide the polar plot frame (spines) but keep the grid visible
+    ax.spines['polar'].set_visible(False)
+    # Customize grid lines (if needed)
+    ax.grid(True, 'major', color='#C6C6C6', linestyle='-', linewidth=0.5, zorder=0)
+
+    # Access and customize the radial grid lines
+    radial_lines = ax.get_xgridlines()
+    for i, line in enumerate(radial_lines):
+        if i % 2 == 0:  # Customize every other radial grid line
+            line.set_linestyle('--')
+            line.set_color('#E6E6E6')
+            line.set_linewidth(0.5)
+
+    radial_lines = ax.get_ygridlines()
+    for i, line in enumerate(radial_lines):
+        line.set_linestyle('--')
+        line.set_color('#E6E6E6')
+        line.set_linewidth(0.5)
+
+    # Customize the appearance of the polar plot
+    ax.set_title(f'Mean Direction of Travel\nwith Kernel Density Estimate\n$\it{{{subject}}}$', fontsize=title_size2)
+    ax.set_yticklabels([])  # Remove radial labels
+    ax.set_xticklabels([])  # Remove angular labels
+
+    # Save the plot
+    # plt.savefig(f'02c_Plot_directions_of_travel_with_mean_and_kernel_density_estimate_{subject}_{scaling_metric}{threshold}.png', dpi=500)
+    # plt.show()
+
+    return plt.gcf()
+
+def donut(df, ax, outer_radius, inner_radius, kde_bw):
+    # Extend the data circularly to account for wrap-around at 0 and 2*pi
+    extended_data = np.concatenate([df - 2 * np.pi, df, df + 2 * np.pi])
+
+    # Create a grid of theta values (angles)
+    theta_grid = np.linspace(0, 2 * np.pi, 360)  # 360 points over full circle
+    
+    # Create a grid of radii
+    r_grid = np.linspace(inner_radius, outer_radius, 100)  # Radius from inner to outer edge
+    
+    # Compute KDE values for the extended data
+    kde = gaussian_kde(extended_data, bw_method=kde_bw)
+    kde_values = kde.evaluate(theta_grid)  # Evaluate KDE on the regular theta grid
+    
+    # Repeat KDE values across radii to create the heatmap data
+    kde_values = np.tile(kde_values, (r_grid.size, 1))
+    
+    # Normalize KDE values for consistent color mapping
+    norm = Normalize(vmin=kde_values.min(), vmax=kde_values.max())
+    
+    # Create the meshgrid for the polar plot
+    theta_mesh, r_mesh = np.meshgrid(theta_grid, r_grid)
+    
+    # Remove polar grid lines and labels
+    ax.grid(False)
+    ax.set_yticklabels([])
+    ax.set_xticklabels([])
+    ax.spines['polar'].set_visible(False)  # Hide the outer frame
+
+    return theta_mesh, r_mesh, kde_values, norm
+
+def df_gaussian_donut(df, metric, subject, heatmap, weight, threshold):
+
+    # Recognizing the presence of a threshold
+    if threshold == None:
+        threshold = '_no_threshold'
+    else:
+        threshold = '_' + threshold
+
+    fig, ax = plt.subplots(figsize=(8, 8), subplot_kw={'projection': 'polar'})
+    
+    diameter=2
+    width_ratio=0.3
+    kde_bw=0.1
+
+    df=df[metric]
+
+    # Calculate radius and width from the diameter
+    outer_radius = diameter / 2
+    width = width_ratio * outer_radius
+    inner_radius = outer_radius - width
+    
+    theta_mesh, r_mesh, kde_values, norm = donut(df, ax, outer_radius, inner_radius, kde_bw)
+    
+    # Set title and figure text
+    ax.set_title(f'Heatmap of Migration Direction\n({subject})', pad=20, ha='center', fontsize=title_size2)
+    
+    # Add a colorbar
+    cbar = plt.colorbar(ax.pcolormesh(theta_mesh, r_mesh, kde_values, shading='gouraud', cmap=heatmap, norm=norm), ax=ax, fraction=0.04, orientation='horizontal', pad=0.1)
+    cbar.set_ticks([])
+    cbar.outline.set_visible(False)  # Remove outline
+    
+    # Add min and max labels below the colorbar
+    cbar.ax.text(0.05, -0.4, 'min', va='center', ha='center', color='black', transform=cbar.ax.transAxes, fontsize=9)
+    cbar.ax.text(0.95, -0.4, 'max', va='center', ha='center', color='black', transform=cbar.ax.transAxes, fontsize=9)
+
+    # Add the density label below the min and max labels
+    cbar.set_label('Density', labelpad=10, fontsize=label_size)
+    
+    # if weight == None:
+    #     plt.savefig(f'04a_Plot_donut_heatmap-migration_direction_{subject}{threshold}.png', dpi=300)
+    # else:
+    #     weight = 'weighted by' + weight
+    #     plt.figtext(0.515, 0.01, f'{weight}', ha='center', color=figtext_color, fontsize=figtext_size)
+    #     plt.savefig(f'04a_Plot_donut_heatmap-migration_direction_{subject}{weight}{threshold}.png', dpi=300)
+
+    # plt.show()
+
+    return plt.gcf()
+
+
+
+
+# ===========================================================================================================================================================================================================================================================================
 # Tracks panel
 # Track visualization
 # Plotting track statistics
 # Statistical testing
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-with ui.nav_panel("Tracks"):
-
-
-    # ===========================================================================================================================================================================================================================================================================
-    # Optics parameters
-    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    # Definition of micron length per pixel
-    microns_per_pixel = 0.7381885238402274 # for 10x lens
-
-    # Define the desired dimensions in microns
-    x_min, x_max = 0, (1600 * microns_per_pixel)
-    y_min, y_max = 0, (1200 * microns_per_pixel)
-    x_axe_remainder = x_max-1150
-    x_add = 50 - x_axe_remainder
-    y_ax_remainder = y_max-850
-    x_substract = (x_max - y_max) + (y_ax_remainder - 50)
-
-    # Calculate the aspect ratio
-    aspect_ratio = x_max / y_max
-
-
-    # ===========================================================================================================================================================================================================================================================================
-    # Plot specs
-    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    title_size = 18
-    label_size = 11
-    figtext_size = 9
-    compass_annotations_size = 15
-    figtext_color = 'grey'
+with ui.nav_panel("Track stats"):
 
 
     # ===========================================================================================================================================================================================================================================================================
@@ -687,7 +877,7 @@ with ui.nav_panel("Tracks"):
 
         # plt.savefig(f'01a_Full_tracks_snapshot{threshold}.png', dpi=300)
         # plt.figure()
-        return ax_visuals
+        return plt.gcf()
 
     def visualize_smoothened_tracks(df, df2, threshold, smoothing_type=None, smoothing_index=10, lw=1):  # smoothened tracks visualization
 
@@ -750,41 +940,217 @@ with ui.nav_panel("Tracks"):
 
         # plt.savefig(f'01a_Full_tracks_snapshot{threshold}.png', dpi=300)
         # plt.show()
-        return ax_visuals
+        return plt.gcf()
+
+
+    # ===========================================================================================================================================================================================================================================================================
+    # Executing plotting functions and displaying the plots
+    # ----------------------------------------------------------------
+
+    with ui.navset_card_tab():
+        with ui.nav_panel("Visualization"):
+            with ui.layout_columns(
+                col_widths=(6,6,6,6),
+                row_heights=(3, 4),	
+            ):
+  
+                with ui.card(full_screen=True):
+                    ui.card_header("Full tracks visualization")
+                    @render.plot
+                    def plot1():
+                        return visualize_full_tracks(
+                            df=Spot_stats_df.get(), 
+                            df2=Track_stats_df.get(), 
+                            threshold=None, 
+                            lw=0.5
+                            )
+
+                with ui.card(full_screen=True):
+                    ui.card_header("Smoothened tracks visualization")
+                    @render.plot
+                    def plot2():
+                        return visualize_smoothened_tracks(
+                            df=Spot_stats_df.get(), 
+                            df2=Track_stats_df.get(), 
+                            threshold=None, 
+                            smoothing_type='moving_average', 
+                            smoothing_index=50, 
+                            lw=0.8
+                            )
+                    
+                with ui.card(full_screen=True):  
+                    ui.card_header("Directionality")
+                    with ui.layout_column_wrap(width=1 / 2):
+                        with ui.card(full_screen=False):
+                            ui.card_header("Scaled by confinement ratio")
+                            @render.plot
+                            def plot3():
+                                return migration_directions_with_kde_plus_mean(
+                                    df=Track_stats_df.get(), 
+                                    metric='MEAN_DIRECTION_RAD', 
+                                    subject='Cells', 
+                                    scaling_metric='CONFINEMENT_RATIO', 
+                                    cmap_normalization_metric=None, 
+                                    cmap=cmap_cells, 
+                                    threshold=None
+                                    )
+                        
+                        with ui.card(full_screen=False):
+                            ui.card_header("Scaled by net distance")
+                            @render.plot
+                            def plot4():
+                                return migration_directions_with_kde_plus_mean(
+                                    df=Track_stats_df.get(), 
+                                    metric='MEAN_DIRECTION_RAD', 
+                                    subject='Cells', 
+                                    scaling_metric='NET_DISTANCE', 
+                                    cmap_normalization_metric=None, 
+                                    cmap=cmap_cells, 
+                                    threshold=None
+                                    )
+                    
+                with ui.card(full_screen=True):
+                    ui.card_header("Migration heatmaps")
+                    with ui.layout_column_wrap(width=1 / 2):
+                        with ui.card(full_screen=False):
+                            ui.card_header("Standard")        
+                            @render.plot
+                            def plot5():
+                                return df_gaussian_donut(
+                                    df=Track_stats_df.get(), 
+                                    metric='MEAN_DIRECTION_RAD', 
+                                    subject='Cells', 
+                                    heatmap='inferno', 
+                                    weight=None, 
+                                    threshold=None
+                                    )
+                        with ui.card(full_screen=False):
+                            ui.card_header("Weighted")
+                            with ui.value_box(
+                            full_screen=False,
+                            theme="text-red"
+                            ):
+                                ""
+                                "Currently unavailable"
+                                ""
+                            
+    
+
+    # ===========================================================================================================================================================================================================================================================================
+    # Statistical testing for tracks
+    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
+# ===========================================================================================================================================================================================================================================================================
+# Frame panel
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+with ui.nav_panel("Frame stats"):
+
+
+    # ===========================================================================================================================================================================================================================================================================
+    # Plotting functions
+    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    def histogram_frame_speed(df):
+        frames = df['POSITION_T'][1:-1]
+        mean_speed = df['SPEED_MEAN'][1:-1]
+        median_speed = df['SPEED_MEDIAN'][1:-1]
+
+        # Apply Savitzky-Golay filter for smoothing
+        mean_speed_smooth = savgol_filter(mean_speed, window_length=11, polyorder=1)
+        median_speed_smooth = savgol_filter(median_speed, window_length=11, polyorder=1)
+
+        # Plotting
+        plt.figure(figsize=(10, 6))
+        plt.plot(frames, mean_speed, '.', label='Mean Speed', alpha=0.5)
+        plt.plot(frames, median_speed, '.', label='Median Speed', alpha=0.5)
+        plt.plot(frames, mean_speed_smooth, '-', label='Smoothed Mean Speed', linewidth=2)
+        plt.plot(frames, median_speed_smooth, '-', label='Smoothed Median Speed', linewidth=2)
+
+        # Set x-axis to start at 0
+        plt.xlim(left=0)
+        plt.ylim(bottom=0)
+
+        plt.xlabel(r'Time $\it{[min]}$')
+        plt.ylabel(r'Speed $\it{[μm]}$')
+        plt.title('Mean and Median Speed per Frame')
+        plt.legend()
+        plt.grid(True)
+        # plt.show()
+        return plt.gcf()
 
 
     with ui.navset_card_tab():
         with ui.nav_panel("Visualization"):
-            with ui.card():
-                ui.card_header("Full tracks visualization")
-                @render.plot
-                def plot1():
-                    return visualize_full_tracks(df=Spot_stats_df.get(), df2=Track_stats_df.get(), threshold=None, lw=0.5)
+            with ui.layout_columns(
+                col_widths={"sm": (12,6,6)},
+                row_heights=(3,4),
+                # height="700px",
+            ):
+                
+                with ui.card(full_screen=True):
+                    ui.card_header("Speed histogram")
+                    @render.plot
+                    def plot7():
+                        return histogram_frame_speed(df=Frame_stats_df.get())
 
-            with ui.card():
-                ui.card_header("Smoothened tracks visualization")
-                @render.plot
-                def plot2():
-                    return visualize_smoothened_tracks(df=Spot_stats_df.get(), df2=Track_stats_df.get(), threshold=None, smoothing_type='moving_average', smoothing_index=50, lw=0.8)
-
-
-
-
-
-
-
-
-
-
-with ui.nav_panel("Frames"):
-    with ui.navset_card_tab():
-        with ui.nav_panel("Visualization"):
-            "content"
-        with ui.nav_panel("Tests"):
-            "content"
-
-
+                with ui.card(full_screen=True):
+                    ui.card_header("Directionality")
+                    with ui.layout_column_wrap(width=1 / 2):
+                        with ui.card(full_screen=False):
+                            ui.card_header("Standard - Scaled by mean distance")
+                            @render.plot
+                            def plot8():
+                                return migration_directions_with_kde_plus_mean(
+                                    df=Frame_stats_df.get(), 
+                                    metric='MEAN_DIRECTION_RAD', 
+                                    subject='Frames (weighted)', 
+                                    scaling_metric='MEAN_DISTANCE', 
+                                    cmap_normalization_metric='POSITION_T', 
+                                    cmap=cmap_frames, 
+                                    threshold=None
+                                    )
+                        with ui.card(full_screen=False):
+                            ui.card_header("Weighted - Scaled by mean distance")
+                            @render.plot
+                            def plot9():
+                                return migration_directions_with_kde_plus_mean(
+                                    df=Frame_stats_df.get(), 
+                                    metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
+                                    subject='Frames (weighted)', 
+                                    scaling_metric='MEAN_DISTANCE', 
+                                    cmap_normalization_metric='POSITION_T', 
+                                    cmap=cmap_frames, 
+                                    threshold=None
+                                    )
+                
+                with ui.card(full_screen=True):
+                    ui.card_header("Migration heatmaps")
+                    with ui.layout_column_wrap(width=1 / 2):
+                        with ui.card(full_screen=False):
+                            ui.card_header("Standard")        
+                            @render.plot
+                            def plot10():
+                                return df_gaussian_donut(
+                                    df=Frame_stats_df.get(), 
+                                    metric='MEAN_DIRECTION_RAD', 
+                                    subject='Frames', 
+                                    heatmap='viridis', 
+                                    weight=None, 
+                                    threshold=None
+                                    )
+                        with ui.card(full_screen=False):
+                            ui.card_header("Weighted")
+                            @render.plot
+                            def plot11():
+                                return df_gaussian_donut(
+                                    df=Frame_stats_df.get(), 
+                                    metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
+                                    subject='Frames', 
+                                    heatmap='viridis', 
+                                    weight='mean distance traveled', 
+                                    threshold=None
+                                    )
+    
