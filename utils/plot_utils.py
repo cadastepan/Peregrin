@@ -238,8 +238,8 @@ def track_visuals(df, df2, title_size=12):
         track_colors[track_id] = colormap(norm(ratio))
 
     # Set up the plot limits
-    x_min, x_max = df_filtered['POSITION_X'].min(), df_filtered['POSITION_X'].max()
-    y_min, y_max = df_filtered['POSITION_Y'].min(), df_filtered['POSITION_Y'].max()
+    x_min, x_max = 0.0, 1180.3634496205236
+    y_min, y_max = 0.0, 885.0880400844326
     ax.set_aspect('1', adjustable='box')
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)

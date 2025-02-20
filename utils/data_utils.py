@@ -1,6 +1,16 @@
 import numpy as np
 import pandas as pd
+from math import floor, ceil
 
+
+
+def dir_round(value, digits=3, direction='down'):
+    if direction == 'up':
+        return ceil(value * 10**digits) / 10**digits
+    elif direction == 'down':
+        return floor(value * 10**digits) / 10**digits
+    else:
+        return round(value, digits)
 
 
 def butter(df, float_columns):
@@ -313,6 +323,16 @@ def percentile_thresholding(df, column_name: str, values: tuple):
     upper_threshold = np.percentile(df[column_name], upper_percentile)
     return df[(df[column_name] >= lower_threshold) & (df[column_name] <= upper_threshold)]
 
+def literal_thresholding(df, column_name: str, values: tuple):
+    lower_threshold, upper_threshold = values
+    return df[(df[column_name] >= lower_threshold) & (df[column_name] <= upper_threshold)]
+
 def dataframe_filter(df, df_filter):
     return df[df["TRACK_ID"].isin(df_filter["TRACK_ID"])]
+
+def values_for_a_metric(df, metric):
+    min_value = floor(df[metric].min())
+    max_value = ceil(df[metric].max())
+    return min_value, max_value
+
 
