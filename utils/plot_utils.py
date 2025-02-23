@@ -212,6 +212,8 @@ def df_gaussian_donut(df, metric, subject, heatmap, weight, threshold, title_siz
 
     return plt.gcf()
 
+    # try to normalize the heatmap colors to the absolute 0 (not min of the kde values) and to the max of the kde values
+
 
 def track_visuals(df, df2, title_size=12):
     # fig and ax definition

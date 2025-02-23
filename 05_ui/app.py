@@ -1,6 +1,7 @@
 from shiny import reactive
 from shiny.express import input, render, ui
 from shiny.types import FileInfo
+import random
 
 import pandas as pd
 import numpy as np
@@ -33,6 +34,16 @@ raw_Frame_stats_df = reactive.value()
 
 
 # ===========================================================================================================================================================================================================================================================================
+# Creating reactive values for thresholding the data
+
+Spot_stats_df_T1 = reactive.value()
+Spot_stats_df_T2 = reactive.value()
+Track_stats_df_T1 = reactive.value()
+Track_stats_df_T2 = reactive.value()
+
+
+
+# ===========================================================================================================================================================================================================================================================================
 # Creating reactive variables for processed dataframe storage
 
 Buttered_df = reactive.value()
@@ -45,7 +56,11 @@ Frame_stats_df = reactive.value()
 # Creating other reactive variables 
 
 slider_values = reactive.value()   # Creating a rective value for the slider values
+Track_metrics = reactive.value()   # Creating a reactive value for the track metrics
+Spot_metrics = reactive.value()    # Creating a reactive value for the spot metrics
 
+# Track_metrics =  ["TRACK_LENGTH", "NET_DISTANCE", "CONFINEMENT_RATIO", "NUM_FRAMES", "SPEED_MEAN", "SPEED_MEDIAN", "SPEED_MAX", "SPEED_MIN", "SPEED_STD_DEVIATION", "MEAN_DIRECTION_DEG", "MEAN_DIRECTION_RAD", "STD_DEVIATION_DEG", "STD_DEVIATION_RAD"]
+# Spot_metrics = ["POSITION_T", "POSITION_X", "POSITION_Y", "QUALITY", "VISIBILITY"]
 
 
 # ===========================================================================================================================================================================================================================================================================
@@ -120,10 +135,10 @@ with ui.nav_panel("Data"):  # Data panel
         file: list[FileInfo] | None = input.file1()
         if file is None:
             return pd.DataFrame()
-        
-        Spot_stats = process_spot_data()
-        raw_Spot_stats_df.set(Spot_stats)
-        Spot_stats_df.set(Spot_stats)
+        else:
+            Spot_stats = process_spot_data()
+            raw_Spot_stats_df.set(Spot_stats)
+            Spot_metrics.set(Spot_stats.columns)
 
 
     @reactive.calc
@@ -133,6 +148,9 @@ with ui.nav_panel("Data"):  # Data panel
             return pd.DataFrame()
 
         Spot_stats = raw_Spot_stats_df.get()
+
+        if Spot_stats.empty:
+            return pd.DataFrame()
 
         tracks_lengths_and_net_distances_df = du.calculate_track_lengths_and_net_distances(Spot_stats) # Calling function to calculate the total distance traveled for each cell from the distances_for_each_cell_per_frame_df
         confinement_ratios_df = du.calculate_confinement_ratio_for_each_cell(tracks_lengths_and_net_distances_df) # Call the function to calculate confinement ratios from the Track_statistics1_df and write it into the Track_statistics1_df
@@ -156,6 +174,9 @@ with ui.nav_panel("Data"):  # Data panel
             return pd.DataFrame()
 
         Spot_stats = Spot_stats_df.get()
+
+        if Spot_stats.empty:
+            return pd.DataFrame()
         
         distances_per_frame_df = du.calculate_distances_per_frame(Spot_stats) # Call the function to calculate distances_per_frame_df
         absolute_directions_per_frame_df = du.calculate_absolute_directions_per_frame(Spot_stats) # Call the function to calculate directions_per_frame_df
@@ -176,20 +197,21 @@ with ui.nav_panel("Data"):  # Data panel
         file: list[FileInfo] | None = input.file1()
         if file is None:
             return pd.DataFrame()
-        
-        Track_stats = process_track_data()
-        raw_Track_stats_df.set(Track_stats)
-        Track_stats_df.set(Track_stats)
+        else:
+            Track_stats = process_track_data()
+            raw_Track_stats_df.set(Track_stats)
+            Track_metrics.set(Track_stats.columns)
+
 
     @reactive.effect
     def update_Frame_stats_df():
         file: list[FileInfo] | None = input.file1()
         if file is None:
             return pd.DataFrame()
-        
-        Frame_stats = process_frame_data()
-        raw_Frame_stats_df.set(Frame_stats)
-        Frame_stats_df.set(Frame_stats)
+        else:
+            Frame_stats = process_frame_data()
+            raw_Frame_stats_df.set(Frame_stats)
+            Frame_stats_df.set(Frame_stats)
 
 
     # =============================================================================================================================================================================================================================================================================
@@ -206,9 +228,9 @@ with ui.nav_panel("Data"):  # Data panel
                 file: list[FileInfo] | None = input.file1()
                 if file is None:
                     return pd.DataFrame()
-                
-                Spot_stats = Spot_stats_df.get()
-                return render.DataGrid(Spot_stats)
+                else:
+                    Spot_stats = Spot_stats_df.get()
+                    return render.DataGrid(Spot_stats)
             
         
         with ui.card():
@@ -219,9 +241,9 @@ with ui.nav_panel("Data"):  # Data panel
                 file: list[FileInfo] | None = input.file1()
                 if file is None:
                     return pd.DataFrame()
-                
-                Track_stats = Track_stats_df.get()
-                return render.DataGrid(Track_stats)
+                else:
+                    Track_stats = Track_stats_df.get()
+                    return render.DataGrid(Track_stats)
             
             
         with ui.card():
@@ -232,15 +254,147 @@ with ui.nav_panel("Data"):  # Data panel
                 file: list[FileInfo] | None = input.file1()
                 if file is None:
                     return pd.DataFrame()
-                
-                Frame_stats = Frame_stats_df.get()
-                return render.DataGrid(Frame_stats)
+                else:
+                    Frame_stats = Frame_stats_df.get()
+                    return render.DataGrid(Frame_stats)
     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # ===========================================================================================================================================================================================================================================================================
 # Sidebar
 # ===========================================================================================================================================================================================================================================================================
+
+
+def update_slider(filter_type, slider):
+    if filter_type == "percentile":
+        ui.update_slider(id=slider, min=0, max=100, value=(0, 100), step=1)
+    elif filter_type == "literal":
+        values = slider_values.get()
+        range = values[1] - values[0]
+
+        if range <= 10:
+            steps = 0.01
+        elif range <= 100:
+            steps = 0.1
+        else:
+            steps = 1
+        
+        if values:
+            ui.update_slider(id=slider, min=values[0], max=values[1], value=values, step=steps)
+
+def update_slider_values(metric, filter, dfA, dfB):
+    if metric in Track_metrics.get():
+        try:
+            if filter == "literal":
+                if dfA.empty:
+                    slider_values.set([0, 100])
+                else:
+                    values = du.values_for_a_metric(dfA, metric)
+                    slider_values.set(values)
+            elif filter == "percentile":
+                slider_values.set([0, 100])
+        except Exception as e:
+            slider_values.set([0, 100])
+    elif metric in Spot_metrics.get():
+        try:
+            if filter == "literal":
+                if dfB.empty:
+                    slider_values.set([0, 100])
+                else:
+                    values = du.values_for_a_metric(dfB, metric)
+                    slider_values.set(values)
+            elif filter == "percentile":
+                slider_values.set([0, 100])
+        except Exception as e:
+            slider_values.set([0, 100])
+    
+def thresholded_histogram(metric, filter_type, slider_range, dfA, dfB):
+    try:
+        if metric in Track_metrics.get():
+            data = dfA.get()
+        elif metric in Spot_metrics.get():
+            data = dfB.get()
+        elif data.empty:
+            return plt.figure()
+        else:
+            return plt.figure()
+
+        values = data[metric].dropna()
+
+        if filter_type == "percentile":
+            lower_percentile = np.percentile(values, slider_range[0])
+            upper_percentile = np.percentile(values, slider_range[1])
+            lower_bound = lower_percentile
+            upper_bound = upper_percentile
+        else:
+            lower_bound = slider_range[0]
+            upper_bound = slider_range[1]
+
+        fig, ax = plt.subplots()
+        n, bins, patches = ax.hist(values, bins=40)
+
+        for i in range(len(patches)):
+            if bins[i] < lower_bound or bins[i+1] > upper_bound:
+                patches[i].set_facecolor('grey')
+            else:
+                patches[i].set_facecolor('#337ab7')
+
+        ax.set_xticks([])  # Remove x-axis ticks
+        ax.set_yticks([])  # Remove y-axis ticks
+        ax.spines[['top','left','right']].set_visible(False)
+
+        return fig
+    
+    except ValueError:
+        return plt.figure()
+
+def data_thresholding_numbers(df):
+    raw = raw_Track_stats_df.get().shape[0]
+    filtered = df.get().shape[0]
+    filtered_out = raw - filtered
+
+    # Filtered data in percents
+    filtered_prcbt = filtered / raw * 100
+    filtered_out_prcbt = filtered_out / raw * 100
+
+    return f"Cells in total: {raw}", f"In focus: {round(filtered_prcbt)} % ({filtered})", f"Filtered out: {round(filtered_out_prcbt)} % ({filtered_out})"
+
+def thresholded_data(filter_type, metric, slider_range, dfA, dfB):
+    if filter_type == "percentile":
+        if metric in Track_metrics.get():
+            return du.percentile_thresholding(dfA, metric, slider_range)
+        elif metric in Spot_metrics.get():
+            return du.percentile_thresholding(dfB, metric, slider_range)
+    elif filter_type == "literal":
+        if metric in Track_metrics.get():
+            return du.literal_thresholding(dfA, metric, slider_range)
+        elif metric in Spot_metrics.get():
+            return du.literal_thresholding(dfB, metric, slider_range)
+
+def update_thresholded_data(metric, dfA, dfB, df0A, df0B):
+    thresholded_df = thresholded_dataA()
+    if metric in Track_metrics.get():
+        dfA.set(thresholded_df)
+        dfB.set(du.dataframe_filter(df0B.get(), dfA.get()))
+    elif metric in Spot_metrics.get():
+        dfB.set(thresholded_df)
+        dfA.set(du.dataframe_filter(df0A.get(), dfB.get()))
 
 
 
@@ -253,7 +407,7 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
     # Creating a slider for thresholding
 
     ui.input_select(  
-        "metric",  
+        "metricA",  
         "Thresholding metric:",  
         {
             "TRACK_LENGTH": "Track length", 
@@ -280,7 +434,7 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
     )  
 
     ui.input_select(
-        "filter",
+        "filterA",
         "Thresholding filter:",
         {
             "literal": "Literal",
@@ -289,7 +443,7 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
     )
 
     ui.input_slider(
-        "slider",
+        "sliderA",
         "Threshold",
         min=0,
         max=100,
@@ -301,140 +455,86 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
     # Reactive functions updating the slider values
     
     @reactive.effect
-    def update_slider_values():
-        if input.metric() in ["TRACK_LENGTH", "NET_DISTANCE", "CONFINEMENT_RATIO", "NUM_FRAMES", "SPEED_MEAN", "SPEED_MEDIAN", "SPEED_MAX", "SPEED_MIN", "SPEED_STD_DEVIATION", "MEAN_DIRECTION_DEG", "MEAN_DIRECTION_RAD", "STD_DEVIATION_DEG", "STD_DEVIATION_RAD"]:
-            if raw_Track_stats_df.get().empty:
-                slider_values.set(0, 100)
-            else:
-                values = du.values_for_a_metric(raw_Track_stats_df.get(), input.metric())
-                slider_values.set(values)
-        elif input.metric() in ["POSITION_T", "POSITION_X", "POSITION_Y", "QUALITY", "VISIBILITY"]:
-            if raw_Spot_stats_df.get().empty:
-                slider_values.set(0, 100)
-            else:
-                values = du.values_for_a_metric(raw_Spot_stats_df.get(), input.metric())
-                slider_values.set(values)
-        else:
-            return slider_values.set(0, 100)
+    def update_sliderA():
+        return update_slider(input.filterA(), "sliderA")
 
     @reactive.effect
-    def update_slider():
-        if input.filter() == "percentile":
-            ui.update_slider("slider", min=0, max=100, value=(0, 100), step=1)
-        elif input.filter() == "literal":
-            values = slider_values.get()
-            range = values[1] - values[0]
-
-            if range <= 10:
-                steps = 0.01
-            elif range <= 100:
-                steps = 0.1
-            else:
-                steps = 1
-            
-            if values:
-                ui.update_slider("slider", min=values[0], max=values[1], value=values, step=steps)
-
-    # @render.plot
-    # def threshold_histogram():
-    #     metric = input.metric()
-    #     filter_type = input.filter()
-    #     slider_range = input.slider()
-
-    #     if metric in ["TRACK_LENGTH", "NET_DISTANCE", "CONFINEMENT_RATIO", "NUM_FRAMES", "SPEED_MEAN", "SPEED_MEDIAN", "SPEED_MAX", "SPEED_MIN", "SPEED_STD_DEVIATION", "MEAN_DIRECTION_DEG", "MEAN_DIRECTION_RAD", "STD_DEVIATION_DEG", "STD_DEVIATION_RAD"]:
-    #         data = raw_Track_stats_df.get()
-    #     elif metric in ["POSITION_T", "POSITION_X", "POSITION_Y", "QUALITY", "VISIBILITY"]:
-    #         data = raw_Spot_stats_df.get()
-    #     else:
-    #         return plt.figure()
-
-    #     if data.empty:
-    #         return plt.figure()
-
-    #     values = data[metric].dropna()
-
-    #     if filter_type == "percentile":
-    #         lower_percentile = np.percentile(values, slider_range[0])
-    #         upper_percentile = np.percentile(values, slider_range[1])
-    #         filtered_values = values[(values >= lower_percentile) & (values <= upper_percentile)]
-    #     else:
-    #         filtered_values = values[(values >= slider_range[0]) & (values <= slider_range[1])]
-
-    #     fig, ax = plt.subplots()
-    #     ax.hist(filtered_values, bins=25)
-    #     ax.set_xticks([])  # Remove x-axis ticks
-    #     ax.set_yticks([])  # Remove y-axis ticks
-
-    #     return fig
-
-
-    @render.plot
-    def threshold_histogram():
-        metric = input.metric()
-        filter_type = input.filter()
-        slider_range = input.slider()
-
-        if metric in ["TRACK_LENGTH", "NET_DISTANCE", "CONFINEMENT_RATIO", "NUM_FRAMES", "SPEED_MEAN", "SPEED_MEDIAN", "SPEED_MAX", "SPEED_MIN", "SPEED_STD_DEVIATION", "MEAN_DIRECTION_DEG", "MEAN_DIRECTION_RAD", "STD_DEVIATION_DEG", "STD_DEVIATION_RAD"]:
-            data = raw_Track_stats_df.get()
-        elif metric in ["POSITION_T", "POSITION_X", "POSITION_Y", "QUALITY", "VISIBILITY"]:
-            data = raw_Spot_stats_df.get()
-        else:
-            return plt.figure()
-
-        if data.empty:
-            return plt.figure()
-
-        values = data[metric].dropna()
-
-        if filter_type == "percentile":
-            lower_percentile = np.percentile(values, slider_range[0])
-            upper_percentile = np.percentile(values, slider_range[1])
-            lower_bound = lower_percentile
-            upper_bound = upper_percentile
-        else:
-            lower_bound = slider_range[0]
-            upper_bound = slider_range[1]
-
-        fig, ax = plt.subplots()
-        n, bins, patches = ax.hist(values, bins=40)
-
-        for i in range(len(patches)):
-            if bins[i] < lower_bound or bins[i+1] > upper_bound:
-                patches[i].set_facecolor('grey')
-            else:
-                patches[i].set_facecolor('#337ab7')
-
-        ax.set_xticks([])  # Remove x-axis ticks
-        ax.set_yticks([])  # Remove y-axis ticks
-
-        return fig
+    def update_slider_valuesA():
+        return update_slider_values(input.metricA(), input.filterA(), raw_Track_stats_df.get(), raw_Spot_stats_df.get())
 
 
     # ===========================================================================================================================================================================================================================================================================
     # Thresholding the data based on percentiles
     
     @reactive.calc
-    def thresholded_data():
-        if input.filter() == "percentile":
-            if input.metric() in ["TRACK_LENGTH", "NET_DISTANCE", "CONFINEMENT_RATIO", "NUM_FRAMES", "SPEED_MEAN", "SPEED_MEDIAN", "SPEED_MAX", "SPEED_MIN", "SPEED_STD_DEVIATION", "MEAN_DIRECTION_DEG", "MEAN_DIRECTION_RAD", "STD_DEVIATION_DEG", "STD_DEVIATION_RAD"]:
-                return du.percentile_thresholding(raw_Track_stats_df.get(), input.metric(), input.slider())
-            elif input.metric() in ["POSITION_T", "POSITION_X", "POSITION_Y", "QUALITY", "VISIBILITY"]:
-                return du.percentile_thresholding(raw_Spot_stats_df.get(), input.metric(), input.slider())
-        elif input.filter() == "literal":
-            if input.metric() in ["TRACK_LENGTH", "NET_DISTANCE", "CONFINEMENT_RATIO", "NUM_FRAMES", "SPEED_MEAN", "SPEED_MEDIAN", "SPEED_MAX", "SPEED_MIN", "SPEED_STD_DEVIATION", "MEAN_DIRECTION_DEG", "MEAN_DIRECTION_RAD", "STD_DEVIATION_DEG", "STD_DEVIATION_RAD"]:
-                return du.literal_thresholding(raw_Track_stats_df.get(), input.metric(), input.slider())
-            elif input.metric() in ["POSITION_T", "POSITION_X", "POSITION_Y", "QUALITY", "VISIBILITY"]:
-                return du.literal_thresholding(raw_Spot_stats_df.get(), input.metric(), input.slider())
+    def thresholded_dataA():
+        return thresholded_data(input.filterA(), input.metricA(), input.sliderA(), raw_Track_stats_df.get(), raw_Spot_stats_df.get())
 
     @reactive.effect
-    def update_thresholded_data():
-        thresholded_df = thresholded_data()
-        if input.metric() in ["TRACK_LENGTH", "NET_DISTANCE", "CONFINEMENT_RATIO", "NUM_FRAMES", "SPEED_MEAN", "SPEED_MEDIAN", "SPEED_MAX", "SPEED_MIN", "SPEED_STD_DEVIATION", "MEAN_DIRECTION_DEG", "MEAN_DIRECTION_RAD", "STD_DEVIATION_DEG", "STD_DEVIATION_RAD"]:
-            Track_stats_df.set(thresholded_df)
-            Spot_stats_df.set(du.dataframe_filter(raw_Spot_stats_df.get(), Track_stats_df.get()))
-        elif input.metric() in ["POSITION_T", "POSITION_X", "POSITION_Y", "QUALITY", "VISIBILITY"]:
-            Spot_stats_df.set(thresholded_df)
-            Track_stats_df.set(du.dataframe_filter(raw_Track_stats_df.get(), Spot_stats_df.get()))
+    def update_thresholded_dataA():
+        return update_thresholded_data(input.metricA(), Track_stats_df, Spot_stats_df, raw_Track_stats_df, raw_Spot_stats_df)
+
+    @render.plot
+    def threshold_histogramA():
+        return thresholded_histogram(input.metricA(), input.filterA(), input.sliderA(), raw_Track_stats_df, raw_Spot_stats_df)
+
+    @render.text
+    def data_thresholding_numbersA1():
+        a, b, c = data_thresholding_numbers(Track_stats_df)
+        return a
+
+    @render.text
+    def data_thresholding_numbersA2():
+        a, b, c = data_thresholding_numbers(Track_stats_df)
+        return b
+
+    @render.text
+    def data_thresholding_numbersA3():
+        a, b, c = data_thresholding_numbers(Track_stats_df)
+        return c
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -890,13 +990,72 @@ with ui.nav_panel("Visualisation"):
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # with ui.nav_panel("Stats"):
+    
+    # ui.input_radio_buttons(  
+    #     "radio1",  
+    #     "Select something",  
+    #     {"1": "", "2": "", "3": ""},
+    #     selected="1"
+    # )
 
+    # ui.input_radio_buttons(
+    #     "radio2",
+    #     "Now select anything",
+    #     {"1": "", "2": "", "3": ""},
+    #     selected="3"
+    # )
 
-    # ===========================================================================================================================================================================================================================================================================
-    # Plotting functions
-    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # ui.input_radio_buttons(
+    #     "radio3",
+    #     "Now you may or may not select again",
+    #     {"1": "", "2": "", "3": ""},
+    #     selected="2"
+    # )
 
-
+    # @reactive.effect
+    # def update_random_radio():
+    #     if input.radio1() != "1":
+    #         radio = choice(["2", "3"])
+    #         if radio == "2":
+    #             ui.update_radio_buttons(
+    #                 "radio2", 
+    #                 {"1": "", "2": "", "3": ""},
+    #                 selected=choice(["1", "2", "3"])
+    #                 )
+    #         else:
+    #             ui.update_radio_buttons(
+    #                 "radio3",
+    #                 {"1": "", "2": "", "3": ""},
+    #                 selected=choice(["1", "2", "3"])
+    #                 )
+    #     elif input.radio2() != "3":
+    #         radio = choice(["1", "3"])
+    #         if radio == "1":
+    #             ui.update_radio_buttons(
+    #                 "radio2", 
+    #                 {"1": "", "2": "", "3": ""},
+    #                 selected=choice(["1", "2", "3"])
+    #                 )
+    #         else:
+    #             ui.update_radio_buttons(
+    #                 "radio3",
+    #                 {"1": "", "2": "", "3": ""},
+    #                 selected=choice(["1", "2", "3"])
+    #                 )
+    #     elif input.radio3() != "2":
+    #         radio = choice(["1", "2"])
+    #         if radio == "1":
+    #             ui.update_radio_buttons(
+    #                 "radio2",
+    #                 {"1": "", "2": "", "3": ""},
+    #                 selected=choice(["1", "2", "3"])
+    #                 )
+    #         else:
+    #             ui.update_radio_buttons(
+    #                 "radio3", 
+    #                 {"1": "", "2": "", "3": ""},
+    #                 selected=choice(["1", "2", "3"])
+    #                 )
 
 
 ui.nav_spacer()  

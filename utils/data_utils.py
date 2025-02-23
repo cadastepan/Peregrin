@@ -318,10 +318,13 @@ def merge_dfs(dataframes, on):
 
 
 def percentile_thresholding(df, column_name: str, values: tuple):
-    lower_percentile, upper_percentile = values
-    lower_threshold = np.percentile(df[column_name], lower_percentile)
-    upper_threshold = np.percentile(df[column_name], upper_percentile)
-    return df[(df[column_name] >= lower_threshold) & (df[column_name] <= upper_threshold)]
+    try:
+        lower_percentile, upper_percentile = values
+        lower_threshold = np.percentile(df[column_name], lower_percentile)
+        upper_threshold = np.percentile(df[column_name], upper_percentile)
+        return df[(df[column_name] >= lower_threshold) & (df[column_name] <= upper_threshold)]
+    except ValueError:
+        return df
 
 def literal_thresholding(df, column_name: str, values: tuple):
     lower_threshold, upper_threshold = values
@@ -331,8 +334,8 @@ def dataframe_filter(df, df_filter):
     return df[df["TRACK_ID"].isin(df_filter["TRACK_ID"])]
 
 def values_for_a_metric(df, metric):
+    df.dropna()
     min_value = floor(df[metric].min())
     max_value = ceil(df[metric].max())
     return min_value, max_value
-
 
