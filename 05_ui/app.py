@@ -858,7 +858,7 @@ with ui.nav_panel("Visualisation"):
                         with ui.card(full_screen=True):
                             ui.card_header("Raw tracks visualization")
                             @render.plot
-                            def plot1():
+                            def raw_tracks():
                                 return pu.visualize_full_tracks(
                                     df=Spot_stats_df.get(), 
                                     df2=Track_stats_df.get(), 
@@ -866,10 +866,22 @@ with ui.nav_panel("Visualisation"):
                                     lw=0.5
                                     )
 
+                            @render.download(label="Download", filename="Raw tracks visualization.png")
+                            def download_raw_tracks():
+                                figure = pu.visualize_full_tracks(
+                                    df=Spot_stats_df.get(), 
+                                    df2=Track_stats_df.get(), 
+                                    threshold=None, 
+                                    lw=0.5
+                                    )
+                                with io.BytesIO() as buf:
+                                    figure.savefig(buf, format="png", dpi=300)
+                                    yield buf.getvalue()
+
                         with ui.card(full_screen=True):
                             ui.card_header("Smoothened tracks visualization")
                             @render.plot
-                            def plot2():
+                            def smoothened_tracks():
                                 return pu.visualize_smoothened_tracks(
                                     df=Spot_stats_df.get(), 
                                     df2=Track_stats_df.get(), 
@@ -879,6 +891,20 @@ with ui.nav_panel("Visualisation"):
                                     lw=0.8
                                     )
 
+                            @render.download
+                            def download_smoothened_tracks(label="Download", filename="Smoothened tracks visualization.png"):
+                                figure = pu.visualize_smoothened_tracks(
+                                    df=Spot_stats_df.get(), 
+                                    df2=Track_stats_df.get(), 
+                                    threshold=None, 
+                                    smoothing_type='moving_average', 
+                                    smoothing_index=50, 
+                                    lw=0.8
+                                    )
+                                with io.BytesIO() as buf:
+                                    figure.savefig(buf, format="png", dpi=300)
+                                    yield buf.getvalue()
+
                 with ui.nav_panel("Directionality plots"):
                     with ui.layout_columns():
                         with ui.card(full_screen=True):  
@@ -887,7 +913,7 @@ with ui.nav_panel("Visualisation"):
                                 with ui.card(full_screen=False):
                                     ui.card_header("Scaled by confinement ratio")
                                     @render.plot
-                                    def plot3():
+                                    def migration_direction_tracks1():
                                         figure = pu.migration_directions_with_kde_plus_mean(
                                             df=Track_stats_df.get(), 
                                             metric='MEAN_DIRECTION_RAD', 
@@ -900,8 +926,8 @@ with ui.nav_panel("Visualisation"):
                                             )
                                         return figure
                                     
-                                    @render.download(label="Download", filename="Track directionality.png")
-                                    def download1():
+                                    @render.download(label="Download", filename="Track directionality (scaled by confinement ratio).png")
+                                    def download_migration_direction_tracks1():
                                         figure = pu.migration_directions_with_kde_plus_mean(
                                             df=Track_stats_df.get(), 
                                             metric='MEAN_DIRECTION_RAD', 
@@ -921,7 +947,7 @@ with ui.nav_panel("Visualisation"):
                                 with ui.card(full_screen=False):
                                     ui.card_header("Scaled by net distance")
                                     @render.plot
-                                    def plot4():
+                                    def migration_direction_tracks2():
                                         figure = pu.migration_directions_with_kde_plus_mean(
                                             df=Track_stats_df.get(), 
                                             metric='MEAN_DIRECTION_RAD', 
@@ -934,8 +960,8 @@ with ui.nav_panel("Visualisation"):
                                             )
                                         return figure
 
-                                    @render.download(label="Download", filename="Track directionality.png")
-                                    def download2():
+                                    @render.download(label="Download", filename="Track directionality (scaled by net distance).png")
+                                    def download_migration_direction_tracks2():
                                         figure = pu.migration_directions_with_kde_plus_mean(
                                             df=Track_stats_df.get(), 
                                             metric='MEAN_DIRECTION_RAD', 
@@ -956,7 +982,7 @@ with ui.nav_panel("Visualisation"):
                                 with ui.card(full_screen=False):
                                     ui.card_header("Standard")        
                                     @render.plot
-                                    def plot5():
+                                    def tracks_migration_heatmap():
                                         return pu.df_gaussian_donut(
                                             df=Track_stats_df.get(), 
                                             metric='MEAN_DIRECTION_RAD', 
@@ -971,7 +997,7 @@ with ui.nav_panel("Visualisation"):
                                             )
                                     
                                     @render.download(label="Download", filename="Cell migration heatmap.png")
-                                    def download3():
+                                    def download_tracks_migration_heatmap():
                                         figure = pu.df_gaussian_donut(
                                             df=Track_stats_df.get(), 
                                             metric='MEAN_DIRECTION_RAD', 
@@ -999,89 +1025,89 @@ with ui.nav_panel("Visualisation"):
                                         ""
 
                 with ui.nav_panel("Whole dataset histograms"):
-                    def histogram_cells_distance(df, metric, str):
-                        # Sort the DataFrame by 'TRACK_LENGTH' in ascending order
-                        df_sorted = df.sort_values(by=metric)
+                    # def histogram_cells_distance(df, metric, str):
+                    #     # Sort the DataFrame by 'TRACK_LENGTH' in ascending order
+                    #     df_sorted = df.sort_values(by=metric)
 
-                        norm = mcolors.Normalize(vmin=df_sorted["NUM_FRAMES"].min(), vmax=df_sorted["NUM_FRAMES"].max())
-                        cmap = plt.colormaps["ocean_r"]
+                    #     norm = mcolors.Normalize(vmin=df_sorted["NUM_FRAMES"].min(), vmax=df_sorted["NUM_FRAMES"].max())
+                    #     cmap = plt.colormaps["ocean_r"]
 
-                        # Create new artificial IDs for sorting purposes (1 for lowest distance, N for highest)
-                        df_sorted["Artificial_ID"] = range(1, len(df_sorted) + 1)
+                    #     # Create new artificial IDs for sorting purposes (1 for lowest distance, N for highest)
+                    #     df_sorted["Artificial_ID"] = range(1, len(df_sorted) + 1)
 
-                        x_span = PlotParams.x_span(df_sorted)
+                    #     x_span = PlotParams.x_span(df_sorted)
 
-                        # Create the figure and axis for the plot
-                        fig, ax = plt.subplots(figsize=(x_span, 8))
-                        fig.set_tight_layout(True)
-                        width = 6
+                    #     # Create the figure and axis for the plot
+                    #     fig, ax = plt.subplots(figsize=(x_span, 8))
+                    #     fig.set_tight_layout(True)
+                    #     width = 6
 
-                        # Loop through each row to plot each cell's data
-                        for idx, row in df_sorted.iterrows():
-                            artificial_id = row["Artificial_ID"]
-                            track_length = row[metric]
-                            num_frames = row["NUM_FRAMES"]
+                    #     # Loop through each row to plot each cell's data
+                    #     for idx, row in df_sorted.iterrows():
+                    #         artificial_id = row["Artificial_ID"]
+                    #         track_length = row[metric]
+                    #         num_frames = row["NUM_FRAMES"]
 
-                            # Get the color based on the number of frames using the viridis colormap
-                            line_color = cmap(norm(num_frames))
+                    #         # Get the color based on the number of frames using the viridis colormap
+                    #         line_color = cmap(norm(num_frames))
 
-                            # Plot the "chimney" or vertical line
-                            ax.vlines(
-                                x=artificial_id,  # X position for the cell
-                                ymin=track_length,  # Starting point of the line (y position)
-                                ymax=track_length + num_frames,  # End point based on number of frames (height)
-                                color=line_color,
-                                linewidth=width,
-                                )
+                    #         # Plot the "chimney" or vertical line
+                    #         ax.vlines(
+                    #             x=artificial_id,  # X position for the cell
+                    #             ymin=track_length,  # Starting point of the line (y position)
+                    #             ymax=track_length + num_frames,  # End point based on number of frames (height)
+                    #             color=line_color,
+                    #             linewidth=width,
+                    #             )
 
-                            plt.plot(artificial_id, track_length, '_', zorder=5, color="lavender")
+                    #         plt.plot(artificial_id, track_length, '_', zorder=5, color="lavender")
 
-                            # Add the mean number of frames as text above each chimney
-                            ax.text(
-                            artificial_id,  # X position (same as the chimney)
-                            track_length + num_frames + 1,  # Y position (slightly above the chimney)
-                            f"{round(num_frames)}",  # The text to display (formatted mean)
-                            ha='center',  # Horizontal alignment center
-                            va='bottom',  # Vertical alignment bottom
-                            fontsize=6,  # Adjust font size if necessary
-                            color='black',  # Color of the text
-                            style='italic'  # Italicize the text
-                            )
+                    #         # Add the mean number of frames as text above each chimney
+                    #         ax.text(
+                    #         artificial_id,  # X position (same as the chimney)
+                    #         track_length + num_frames + 1,  # Y position (slightly above the chimney)
+                    #         f"{round(num_frames)}",  # The text to display (formatted mean)
+                    #         ha='center',  # Horizontal alignment center
+                    #         va='bottom',  # Vertical alignment bottom
+                    #         fontsize=6,  # Adjust font size if necessary
+                    #         color='black',  # Color of the text
+                    #         style='italic'  # Italicize the text
+                    #         )
 
-                            x = int(row['Artificial_ID'])
+                    #         x = int(row['Artificial_ID'])
 
-                            plt.xticks(range(x), rotation=90) # add loads of ticks
-                            plt.grid(which='major', color='#DDDDDD', linewidth=0.8)
-                            plt.grid(which='minor', color='#EEEEEE', linestyle=':', linewidth=0.5)
+                    #         plt.xticks(range(x), rotation=90) # add loads of ticks
+                    #         plt.grid(which='major', color='#DDDDDD', linewidth=0.8)
+                    #         plt.grid(which='minor', color='#EEEEEE', linestyle=':', linewidth=0.5)
 
 
-                        max_y = df_sorted[metric].max()
-                        num_x_values = df_sorted[metric].count()
+                    #     max_y = df_sorted[metric].max()
+                    #     num_x_values = df_sorted[metric].count()
 
-                        # Adjust the plot aesthetics
-                        plt.tick_params(axis='x', rotation=60)
-                        plt.tick_params(axis='y', labelsize=8)
-                        plt.xticks(range(num_x_values)) # add loads of ticks
-                        plt.grid(which='major', color='#DDDDDD', linewidth=0.8)
-                        plt.grid(which='minor', color='#EEEEEE', linestyle=':', linewidth=0.5)
+                    #     # Adjust the plot aesthetics
+                    #     plt.tick_params(axis='x', rotation=60)
+                    #     plt.tick_params(axis='y', labelsize=8)
+                    #     plt.xticks(range(num_x_values)) # add loads of ticks
+                    #     plt.grid(which='major', color='#DDDDDD', linewidth=0.8)
+                    #     plt.grid(which='minor', color='#EEEEEE', linestyle=':', linewidth=0.5)
 
-                        # Set ticks, labels and title
-                        ax.set_xticks(range(1, num_x_values + 1))
-                        ax.set_yticks(np.arange(0, max_y + 1, 10))
-                        ax.set_xlabel(f"Cells (sorted by {str} distance)")
-                        ax.set_ylabel(f"{str} distance traveled [μm]")
-                        ax.set_title(f"{str} Distance Traveled by Cells\nWith Length Representing Number of Frames")
+                    #     # Set ticks, labels and title
+                    #     ax.set_xticks(range(1, num_x_values + 1))
+                    #     ax.set_yticks(np.arange(0, max_y + 1, 10))
+                    #     ax.set_xlabel(f"Cells (sorted by {str} distance)")
+                    #     ax.set_ylabel(f"{str} distance traveled [μm]")
+                    #     ax.set_title(f"{str} Distance Traveled by Cells\nWith Length Representing Number of Frames")
 
-                        # Invert x-axis so the highest distance is on the left
-                        plt.gca().invert_xaxis()
+                    #     # Invert x-axis so the highest distance is on the left
+                    #     plt.gca().invert_xaxis()
 
-                        ax.set_xlim(right=0, left=num_x_values+1)  # Adjust the left limit as needed
+                    #     ax.set_xlim(right=0, left=num_x_values+1)  # Adjust the left limit as needed
 
-                        # Show the plot
-                        # plt.savefig(op.join(save_path, f"02f_Histogram_{str}_distance_traveled_per_cell.png"))
-                        # plt.show()
+                    #     # Show the plot
+                    #     # plt.savefig(op.join(save_path, f"02f_Histogram_{str}_distance_traveled_per_cell.png"))
+                    #     # plt.show()
 
-                        return plt.gcf()
+                    #     return plt.gcf()
                     
                     with ui.layout_column_wrap(width=2 / 2):
                         with ui.card(full_screen=False): 
@@ -1094,8 +1120,8 @@ with ui.nav_panel("Visualisation"):
                                             width=3600,
                                             height=500
                                             )
-                                    def plot6():
-                                        figure = histogram_cells_distance(
+                                    def cell_histogram_1():
+                                        figure = pu.histogram_cells_distance(
                                             df=Track_stats_df.get(), 
                                             metric='NET_DISTANCE', 
                                             str='Net'
@@ -1103,8 +1129,8 @@ with ui.nav_panel("Visualisation"):
                                         return figure
                                     
                                     @render.download(label="Download", filename="Net distances travelled.png")
-                                    def download11():
-                                        figure = histogram_cells_distance(
+                                    def download_cell_histogram_1():
+                                        figure = pu.histogram_cells_distance(
                                             df=Track_stats_df.get(), 
                                             metric='NET_DISTANCE', 
                                             str='Net'
@@ -1119,8 +1145,8 @@ with ui.nav_panel("Visualisation"):
                                             width=3800,
                                             height=1000
                                             )
-                                    def plot12():
-                                        figure = histogram_cells_distance(
+                                    def cell_histogram_2():
+                                        figure = pu.histogram_cells_distance(
                                             df=Track_stats_df.get(), 
                                             metric='TRACK_LENGTH', 
                                             str='Total'
@@ -1131,8 +1157,8 @@ with ui.nav_panel("Visualisation"):
                                             label="Download", 
                                             filename="Track lengths.png"
                                             )
-                                    def download12():
-                                        figure = histogram_cells_distance(
+                                    def download_cell_histogram_2():
+                                        figure = pu.histogram_cells_distance(
                                             df=Track_stats_df.get(), 
                                             metric='TRACK_LENGTH', 
                                             str='Total'
@@ -1157,12 +1183,12 @@ with ui.nav_panel("Visualisation"):
                         with ui.card(full_screen=True):
                             ui.card_header("Speed histogram")
                             @render.plot
-                            def plot7():
+                            def migration_histogram():
                                 figure = pu.histogram_frame_speed(df=Frame_stats_df.get())
                                 return figure
 
-                            @render.download(label="Download", filename="Track directionality.png")
-                            def download4():
+                            @render.download(label="Download", filename="Speed histogram.png")
+                            def download_migration_histogram():
                                 figure = pu.histogram_frame_speed(df=Frame_stats_df.get())
                                 with io.BytesIO() as buf:
                                     figure.savefig(buf, format="png", dpi=300)
@@ -1176,7 +1202,7 @@ with ui.nav_panel("Visualisation"):
                                 with ui.card(full_screen=False):
                                     ui.card_header("Standard - Scaled by mean distance")
                                     @render.plot
-                                    def plot8():
+                                    def migration_direction_frames1():
                                         return pu.migration_directions_with_kde_plus_mean(
                                             df=Frame_stats_df.get(), 
                                             metric='MEAN_DIRECTION_RAD', 
@@ -1187,10 +1213,27 @@ with ui.nav_panel("Visualisation"):
                                             threshold=None,
                                             title_size2=title_size2
                                             )
+                                    
+                                    @render.download(label="Download", filename="Frame directionality (standard - scaled by mean distance).png")
+                                    def download_migration_direction_frames1():
+                                        figure = pu.migration_directions_with_kde_plus_mean(
+                                            df=Frame_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD', 
+                                            subject='Frames (weighted)', 
+                                            scaling_metric='MEAN_DISTANCE', 
+                                            cmap_normalization_metric='POSITION_T', 
+                                            cmap=cmap_frames, 
+                                            threshold=None,
+                                            title_size2=title_size2
+                                            )
+                                        with io.BytesIO() as buf:
+                                            figure.savefig(buf, format="png", dpi=300)
+                                            yield buf.getvalue()
+
                                 with ui.card(full_screen=False):
                                     ui.card_header("Weighted - Scaled by mean distance")
                                     @render.plot
-                                    def plot9():
+                                    def migration_direction_frames2():
                                         return pu.migration_directions_with_kde_plus_mean(
                                             df=Frame_stats_df.get(), 
                                             metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
@@ -1201,6 +1244,22 @@ with ui.nav_panel("Visualisation"):
                                             threshold=None,
                                             title_size2=title_size2
                                             )
+                                    
+                                    @render.download(label="Download", filename="Frame directionality (weighted - scaled by mean distance).png")
+                                    def download_migration_direction_frames2():
+                                        figure = pu.migration_directions_with_kde_plus_mean(
+                                            df=Frame_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
+                                            subject='Frames (weighted)', 
+                                            scaling_metric='MEAN_DISTANCE', 
+                                            cmap_normalization_metric='POSITION_T', 
+                                            cmap=cmap_frames, 
+                                            threshold=None,
+                                            title_size2=title_size2
+                                            )
+                                        with io.BytesIO() as buf:
+                                            figure.savefig(buf, format="png", dpi=300)
+                                            yield buf.getvalue()
                 
                         with ui.card(full_screen=True):
                             ui.card_header("Migration heatmaps")
@@ -1208,7 +1267,7 @@ with ui.nav_panel("Visualisation"):
                                 with ui.card(full_screen=False):
                                     ui.card_header("Standard")        
                                     @render.plot
-                                    def plot10():
+                                    def frame_migration_heatmap_1():
                                         return pu.df_gaussian_donut(
                                             df=Frame_stats_df.get(), 
                                             metric='MEAN_DIRECTION_RAD', 
@@ -1221,10 +1280,29 @@ with ui.nav_panel("Visualisation"):
                                             figtext_color=figtext_color,
                                             figtext_size=figtext_size
                                             )
+                                    
+                                    @render.download(label="Download", filename="Frame migration heatmap (standard).png")
+                                    def download_frame_migration_heatmap_1():
+                                        figure = pu.df_gaussian_donut(
+                                            df=Frame_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD', 
+                                            subject='Frames', 
+                                            heatmap='viridis', 
+                                            weight=None, 
+                                            threshold=None,
+                                            title_size2=title_size2,
+                                            label_size=label_size,
+                                            figtext_color=figtext_color,
+                                            figtext_size=figtext_size
+                                            )
+                                        with io.BytesIO() as buf:
+                                            figure.savefig(buf, format="png", dpi=300)
+                                            yield buf.getvalue()
+
                                 with ui.card(full_screen=False):
                                     ui.card_header("Weighted")
                                     @render.plot
-                                    def plot11():
+                                    def frame_migration_heatmap_2():
                                         return pu.df_gaussian_donut(
                                             df=Frame_stats_df.get(), 
                                             metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
@@ -1237,6 +1315,24 @@ with ui.nav_panel("Visualisation"):
                                             figtext_color=figtext_color,
                                             figtext_size=figtext_size
                                             )
+                                    
+                                    @render.download(label="Download", filename="Frame migration heatmap (weighted).png")
+                                    def download_frame_migration_heatmap_2():
+                                        figure = pu.df_gaussian_donut(
+                                            df=Frame_stats_df.get(), 
+                                            metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
+                                            subject='Frames', 
+                                            heatmap='viridis', 
+                                            weight='mean distance traveled', 
+                                            threshold=None,
+                                            title_size2=title_size2,
+                                            label_size=label_size,
+                                            figtext_color=figtext_color,
+                                            figtext_size=figtext_size
+                                            )
+                                        with io.BytesIO() as buf:
+                                            figure.savefig(buf, format="png", dpi=300)
+                                            yield buf.getvalue()
 
 
 # ===========================================================================================================================================================================================================================================================================
