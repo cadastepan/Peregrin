@@ -5,6 +5,7 @@ from matplotlib.colors import Normalize
 from matplotlib.patches import FancyArrowPatch
 from scipy.stats import gaussian_kde
 from scipy.signal import savgol_filter
+from peregrin.scripts import PlotParams
 
 
 def histogram_frame_speed(df):
@@ -248,8 +249,8 @@ def track_visuals(df, df2, title_size=12):
     ax.set_xlabel('Position X [microns]')
     ax.set_ylabel('Position Y [microns]')
     ax.set_title('Track Visualization', fontsize=title_size)
-    ax.set_facecolor('dimgrey')
-    ax.grid(True, which='both', axis='both', color='grey', linewidth=1)
+    ax.set_facecolor('darkgrey')
+    ax.grid(True, which='both', axis='both', color='silver', linewidth=1)
 
     # Manually set the major tick locations and labels
     x_ticks_major = np.arange(x_min, x_max, 200)  # Adjust the step size as needed
@@ -388,3 +389,86 @@ def visualize_smoothened_tracks(df, df2, threshold, smoothing_type=None, smoothi
     return plt.gcf()
 
 
+def histogram_cells_distance(df, metric, str):
+    # Sort the DataFrame by 'TRACK_LENGTH' in ascending order
+    df_sorted = df.sort_values(by=metric)
+
+    norm = mcolors.Normalize(vmin=df_sorted["NUM_FRAMES"].min(), vmax=df_sorted["NUM_FRAMES"].max())
+    cmap = plt.colormaps["ocean_r"]
+
+    # Create new artificial IDs for sorting purposes (1 for lowest distance, N for highest)
+    df_sorted["Artificial_ID"] = range(1, len(df_sorted) + 1)
+
+    x_span = PlotParams.x_span(df_sorted)
+
+    # Create the figure and axis for the plot
+    fig, ax = plt.subplots(figsize=(x_span, 8))
+    fig.set_tight_layout(True)
+    width = 6
+
+    # Loop through each row to plot each cell's data
+    for idx, row in df_sorted.iterrows():
+        artificial_id = row["Artificial_ID"]
+        track_length = row[metric]
+        num_frames = row["NUM_FRAMES"]
+
+        # Get the color based on the number of frames using the viridis colormap
+        line_color = cmap(norm(num_frames))
+
+        # Plot the "chimney" or vertical line
+        ax.vlines(
+            x=artificial_id,  # X position for the cell
+            ymin=track_length,  # Starting point of the line (y position)
+            ymax=track_length + num_frames,  # End point based on number of frames (height)
+            color=line_color,
+            linewidth=width,
+            )
+
+        plt.plot(artificial_id, track_length, '_', zorder=5, color="lavender")
+
+        # Add the mean number of frames as text above each chimney
+        ax.text(
+        artificial_id,  # X position (same as the chimney)
+        track_length + num_frames + 1,  # Y position (slightly above the chimney)
+        f"{round(num_frames)}",  # The text to display (formatted mean)
+        ha='center',  # Horizontal alignment center
+        va='bottom',  # Vertical alignment bottom
+        fontsize=6,  # Adjust font size if necessary
+        color='black',  # Color of the text
+        style='italic'  # Italicize the text
+        )
+
+        x = int(row['Artificial_ID'])
+
+        plt.xticks(range(x), rotation=90) # add loads of ticks
+        plt.grid(which='major', color='#DDDDDD', linewidth=0.8)
+        plt.grid(which='minor', color='#EEEEEE', linestyle=':', linewidth=0.5)
+
+
+    max_y = df_sorted[metric].max()
+    num_x_values = df_sorted[metric].count()
+
+    # Adjust the plot aesthetics
+    plt.tick_params(axis='x', rotation=60)
+    plt.tick_params(axis='y', labelsize=8)
+    plt.xticks(range(num_x_values)) # add loads of ticks
+    plt.grid(which='major', color='#DDDDDD', linewidth=0.8)
+    plt.grid(which='minor', color='#EEEEEE', linestyle=':', linewidth=0.5)
+
+    # Set ticks, labels and title
+    ax.set_xticks(range(1, num_x_values + 1))
+    ax.set_yticks(np.arange(0, max_y + 1, 10))
+    ax.set_xlabel(f"Cells (sorted by {str} distance)")
+    ax.set_ylabel(f"{str} distance traveled [μm]")
+    ax.set_title(f"{str} Distance Traveled by Cells\nWith Length Representing Number of Frames")
+
+    # Invert x-axis so the highest distance is on the left
+    plt.gca().invert_xaxis()
+
+    ax.set_xlim(right=0, left=num_x_values+1)  # Adjust the left limit as needed
+
+    # Show the plot
+    # plt.savefig(op.join(save_path, f"02f_Histogram_{str}_distance_traveled_per_cell.png"))
+    # plt.show()
+
+    return plt.gcf()
