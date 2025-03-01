@@ -1,7 +1,6 @@
 from shiny import reactive
 from shiny.express import input, render, ui
 from shiny.types import FileInfo
-import random
 
 import pandas as pd
 import numpy as np
@@ -1256,74 +1255,6 @@ with ui.nav_panel("Visualisation"):
 # Frame panel
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# with ui.nav_panel("Stats"):
-    
-    # ui.input_radio_buttons(  
-    #     "radio1",  
-    #     "Select something",  
-    #     {"1": "", "2": "", "3": ""},
-    #     selected="1"
-    # )
-
-    # ui.input_radio_buttons(
-    #     "radio2",
-    #     "Now select anything",
-    #     {"1": "", "2": "", "3": ""},
-    #     selected="3"
-    # )
-
-    # ui.input_radio_buttons(
-    #     "radio3",
-    #     "Now you may or may not select again",
-    #     {"1": "", "2": "", "3": ""},
-    #     selected="2"
-    # )
-
-    # @reactive.effect
-    # def update_random_radio():
-    #     if input.radio1() != "1":
-    #         radio = choice(["2", "3"])
-    #         if radio == "2":
-    #             ui.update_radio_buttons(
-    #                 "radio2", 
-    #                 {"1": "", "2": "", "3": ""},
-    #                 selected=choice(["1", "2", "3"])
-    #                 )
-    #         else:
-    #             ui.update_radio_buttons(
-    #                 "radio3",
-    #                 {"1": "", "2": "", "3": ""},
-    #                 selected=choice(["1", "2", "3"])
-    #                 )
-    #     elif input.radio2() != "3":
-    #         radio = choice(["1", "3"])
-    #         if radio == "1":
-    #             ui.update_radio_buttons(
-    #                 "radio2", 
-    #                 {"1": "", "2": "", "3": ""},
-    #                 selected=choice(["1", "2", "3"])
-    #                 )
-    #         else:
-    #             ui.update_radio_buttons(
-    #                 "radio3",
-    #                 {"1": "", "2": "", "3": ""},
-    #                 selected=choice(["1", "2", "3"])
-    #                 )
-    #     elif input.radio3() != "2":
-    #         radio = choice(["1", "2"])
-    #         if radio == "1":
-    #             ui.update_radio_buttons(
-    #                 "radio2",
-    #                 {"1": "", "2": "", "3": ""},
-    #                 selected=choice(["1", "2", "3"])
-    #                 )
-    #         else:
-    #             ui.update_radio_buttons(
-    #                 "radio3", 
-    #                 {"1": "", "2": "", "3": ""},
-    #                 selected=choice(["1", "2", "3"])
-    #                 )
-
 
 ui.nav_spacer()  
 with ui.nav_control():  
@@ -1335,3 +1266,4 @@ with ui.nav_control():
 # ===========================================================================================================================================================================================================================================================================
 # Action buttons for additional browse windows used for inputting other data frames and also making a window for each input which will leave a mark on the dataframe e.g. Treatment CK12 - which will be also written into a column specifying the conditions 
 # Merging the dataframes
+# exporting downloads in form of a rasterized file
