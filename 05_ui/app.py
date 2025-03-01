@@ -1,7 +1,6 @@
 from shiny import reactive
 from shiny.express import input, render, ui
 from shiny.types import FileInfo
-import random
 
 import pandas as pd
 import numpy as np
