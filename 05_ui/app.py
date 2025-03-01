@@ -1266,3 +1266,4 @@ with ui.nav_control():
 # ===========================================================================================================================================================================================================================================================================
 # Action buttons for additional browse windows used for inputting other data frames and also making a window for each input which will leave a mark on the dataframe e.g. Treatment CK12 - which will be also written into a column specifying the conditions 
 # Merging the dataframes
+# exporting downloads in form of a rasterized file
