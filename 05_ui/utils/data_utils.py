@@ -13,7 +13,14 @@ def dir_round(value, digits=3, direction='down'):
         return round(value, digits)
 
 
-def butter(df, float_columns):
+def butter(df, ):
+
+    unneccessary_float_columns = [  # Unneccesary float columns
+        'ID', 
+        'TRACK_ID', 
+        'POSITION_T', 
+        'FRAME'
+        ]
 
     # Loads the data into a DataFrame
     df = pd.DataFrame(df)
@@ -62,7 +69,7 @@ def butter(df, float_columns):
     df = df.dropna(axis=1)
 
     # Here we convert the unnecessary floats (from the list in which we defined them) to integers
-    df[float_columns] = df[float_columns].astype(int)
+    df[unneccessary_float_columns] = df[unneccessary_float_columns].astype(int)
 
     return df
 
