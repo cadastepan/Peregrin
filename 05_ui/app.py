@@ -260,6 +260,12 @@ with ui.nav_panel("Data"):  # Data panel
                 else:
                     Spot_stats = Spot_stats_df.get()
                     return render.DataGrid(Spot_stats)
+                
+            @render.download(label="Download", filename="Spot_stats.csv")
+            def download_spot_stats():
+                with io.BytesIO() as buf:
+                    Spot_stats_df.get().to_csv(buf, index=False)
+                    yield buf.getvalue()
             
         
         with ui.card():
@@ -273,6 +279,12 @@ with ui.nav_panel("Data"):  # Data panel
                 else:
                     Track_stats = Track_stats_df.get()
                     return render.DataGrid(Track_stats)
+                
+            @render.download(label="Download", filename="Track_stats.csv")
+            def download_track_stats():
+                with io.BytesIO() as buf:
+                    Track_stats_df.get().to_csv(buf, index=False)
+                    yield buf.getvalue()
             
             
         with ui.card():
@@ -286,6 +298,12 @@ with ui.nav_panel("Data"):  # Data panel
                 else:
                     Frame_stats = Frame_stats_df.get()
                     return render.DataGrid(Frame_stats)
+                
+            @render.download(label="Download", filename="Frame_stats.csv")
+            def download_frame_stats():
+                with io.BytesIO() as buf:
+                    Frame_stats_df.get().to_csv(buf, index=False)
+                    yield buf.getvalue()
     
 
 
@@ -890,8 +908,8 @@ with ui.nav_panel("Visualisation"):
                                     lw=0.8
                                     )
 
-                            @render.download
-                            def download_smoothened_tracks(label="Download", filename="Smoothened tracks visualization.png"):
+                            @render.download(label="Download", filename="Smoothened tracks visualization.png")
+                            def download_smoothened_tracks():
                                 figure = pu.visualize_smoothened_tracks(
                                     df=Spot_stats_df.get(), 
                                     df2=Track_stats_df.get(), 
@@ -1069,10 +1087,7 @@ with ui.nav_panel("Visualisation"):
                                             )
                                         return figure
                                     
-                                    @render.download(
-                                            label="Download", 
-                                            filename="Track lengths.png"
-                                            )
+                                    @render.download(label="Download", filename="Track lengths.png")
                                     def download_cell_histogram_2():
                                         figure = pu.histogram_cells_distance(
                                             df=Track_stats_df.get(), 
