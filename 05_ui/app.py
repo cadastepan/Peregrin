@@ -109,10 +109,7 @@ Thresholding_filters = {
 
 
 
-# Directionality metric
-# Make it possible to input multiple data files while specifying the conditions for each of the data frames inputed 
-# For example, I would input 2 datasets from no treatment (control) - lets say i would get text input window popup to name what it is after each dataset (data file) input and so i would write something like ctr1 and ctr2 which would then be assigned to a column named treatment
-# The app should render the whole dataset in which the column treatment would have the str value assigned
+# Directionality metric 
 # When downloading, I could make it possible to download the merged df and the separate datasets as well, in which case I would exclude the treatment column but rather include it in the name of the file
 # I may include some metadata as well for download such as the data of the analysis and what not idk
 # # I could also make it possible to download the data as a .txt file or .xlsx file
