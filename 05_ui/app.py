@@ -59,10 +59,10 @@ slider_valuesT1 = reactive.value()   # Creating a rective value for the slider v
 slider_valuesT2 = reactive.value()   # Creating a rective value for the slider values
 slider_valuesT3 = reactive.value()   # Creating a rective value for the slider values
 slider_valuesT4 = reactive.value()   # Creating a rective value for the slider values
-Track_metrics = reactive.value()   # Creating a reactive value for the track metrics
-Spot_metrics = reactive.value()    # Creating a reactive value for the spot metrics
+Track_metrics = reactive.value()     # Creating a reactive value for the track metrics
+Spot_metrics = reactive.value()      # Creating a reactive value for the spot metrics
 
-count = reactive.value(1)   # Creating a reactive value for the count of the data inputs
+count = reactive.value(1)            # Data input counter
 
 
 
@@ -100,86 +100,13 @@ Thresholding_filters = {
 # Extracting separate dataframes
 
 
-with ui.nav_panel("Data"):  # Data panel
-
-    # ui.input_file("file1", "Input CSV", accept=[".csv"], multiple=True, placeholder="No files selected")   # Input field
 
 
 
 
-    with ui.div(id="data-inputs"):  # Data inputs
-
-        ui.input_action_button("more", "Add data input")
-        ui.input_action_button("less", "Remove data input")
-
-
-        @render.ui
-        def default_input():
-            return ui.input_file("file1", "Input CSV", accept=[".csv"], multiple=True, placeholder="No files selected")   # Input field
-
-
-        @reactive.effect
-        @reactive.event(input.more)
-        def uhm():
-            if input.more():
-                count.set(count.get() + 1)
-                adding = count.get()
-                browser = ui.input_file(f"file_{adding}", f"Input CSV {adding}", accept=[".csv"], multiple=True, placeholder="No files selected")
-
-                ui.insert_ui(
-                    ui.div(
-                        {"id": f"additional-input-{adding}"}, browser),
-                        selector="#data-inputs",
-                        where="beforeEnd",
-                )
-
-        @reactive.effect
-        @reactive.event(input.less)
-        def uh():
-            if input.less():
-                removing = count.get()
-                ui.remove_ui(f"#additional-input-{removing}")
-                count.set(removing - 1)
-        
-
-    # @render.text
-    # def text():
-    #     return f"Number of data inputs: {count.get()}"
-            
-        
-            
-
-                
-            
-
-            
- 
 
 
 
-
-    @reactive.calc # Decorator for a reactive function
-    def parsed_file(): # File reading
-        file: list[FileInfo] | None = input.file1()
-        if file is None:
-            return pd.DataFrame()
-        
-
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #                     \/
-        df = pd.read_csv(file[0]["datapath"])  # pyright: ignore[reportUnknownMemberType]
-        buttered = du.butter(df) # cleansing multiple column labeling, selectively dropping NaN values, 
-
-        return buttered
-    
-    # =============================================================================================================================================================================================================================================================================
-    # Executing the functions 
-    # Creating separate dataframes
-    # Itermidiate caching of the dataframes
-
-
-
-    
 
 
 # Directionality metric
@@ -192,6 +119,152 @@ with ui.nav_panel("Data"):  # Data panel
 # # # 2D visualization - gating
 
 
+
+
+
+
+
+
+
+
+
+with ui.nav_panel("Input"):
+    
+    with ui.div(id="data-inputs"): # div container for flow content
+
+        # =============================================================================================================================================================================================================================================================================
+        # Buttons for adding and removing additional data input
+
+        ui.input_action_button("more", "Add data input")
+        ui.input_action_button("less", "Remove data input")
+
+
+        # =============================================================================================================================================================================================================================================================================
+        # Default data input slot
+
+        @render.ui
+        def default_input():
+            default_browser = ui.input_file("file1", "Input CSV", accept=[".csv"], multiple=True, placeholder="No files selected")
+            default_label = ui.input_text("label1", "Data label", placeholder="write something")
+            default_use = ui.input_action_button("use1", "Use")   
+            return default_label, default_browser, default_use
+
+
+        # =============================================================================================================================================================================================================================================================================
+        # Additional data input slots - reacting on the buttons
+
+        @reactive.effect
+        @reactive.event(input.more)                             # "Add data input" button sensor
+        def add_inputs():
+            if input.more():                                    # REACTION:
+                count.set(count.get() + 1)                      # Increasing the input count
+                adding = count.get()                            # Getting the current input count
+
+                browser = ui.input_file(                        # CSV file browser
+                    id=f"file_{adding}", 
+                    label=f"Input CSV {adding}", 
+                    accept=[".csv"], 
+                    multiple=True, 
+                    placeholder="No files selected"
+                    )
+                label = ui.input_text(                          # Data labeling text window
+                    id=f"label_{adding}", 
+                    label=f"Data label {adding}", 
+                    placeholder="write something"
+                    )
+                use = ui.input_action_button(                   # Button for applying visualization
+                    id=f"use_{adding}", 
+                    label="Use"
+                    )
+
+                ui.insert_ui(                                   # Rendering the additional input slot container
+                    ui.div(                                     # container consisting of the label, browser and use button
+                        {"id": f"additional-input-{adding}"}, 
+                        label, browser, use),
+                        selector="#data-inputs",
+                        where="beforeEnd",
+                )
+
+        @reactive.effect
+        @reactive.event(input.less)                             # "Remove data input" button sensor
+        def remove_inputs():
+            if input.less():                                    # REACTION:
+                removing = count.get()                          # Getting the current input count
+                ui.remove_ui(f"#additional-input-{removing}")   # Removing the last input slot (one with the current input count)
+                count.set(removing - 1)                         # Decreasing the input count
+
+
+
+    @reactive.calc 
+    def parsed_file():                                              # File-reading 
+
+        all_data = []                                                   # List storing processed DataFrames
+
+        file_list: list[FileInfo] | None = input.file1()                # Getting the list of files
+
+        if file_list is None:
+            return pd.DataFrame()
+        
+        else:
+            for file_count, file in enumerate(file_list, start=1):      # Enumerate and cycle through files
+                df = pd.read_csv(file["datapath"])                     
+                buttered = du.butter(df)                                
+
+                                                                    
+                label = input.label1()                                  # Getting the label to assign the 'TREATMENT' column parameter
+                if not label or label is None:                          # If no label is provided, assign a default one
+                    buttered['TREATMENT'] = f"file_{file_count}"
+                else:                                                   # Else, assign the given lable
+                    buttered['TREATMENT'] = f"{label} {file_count}"
+
+                all_data.append(buttered)                               # Store processed DataFrame
+
+            return pd.concat(all_data)                                  # Return a joined DataFrame
+
+    @reactive.calc
+    def parsed_files():                                             # File-reading - additional data input slots
+
+        browse_count = count.get()                                      # Getting the current input count
+        all_data = []                                                   # List storing processed DataFrames                            
+
+        for i in range(2, browse_count + 1):                            # Cycle trough the additional input slots 
+
+            file_list: list[FileInfo] | None = input[f"file_{i}"]()     # Getting the list of files
+
+            if file_list is None:
+                return pd.DataFrame()
+            
+            else:
+                for file in file_list:                                  # Enumerate and cycle through files
+                    df = pd.read_csv(file["datapath"])                  
+                    buttered = du.butter(df)
+
+                    label = input[f"label_{i}"]()                       # Getting the label to assign the 'TREATMENT' column parameter
+                    if not label or label is None:                      # If no label is provided, assign a default one
+                        buttered['TREATMENT'] = f"file_{i}"
+                    else:                                               # Else, assign the given lable
+                        buttered['TREATMENT'] = f"{label} {i}"
+
+                    all_data.append(buttered)                           # Store processed DataFrame
+
+                return pd.concat(all_data)                              # Return a joined DataFrame
+
+
+
+                
+            
+
+            
+ 
+
+
+
+with ui.nav_panel("Data frames"):  # Data panel
+
+    # =============================================================================================================================================================================================================================================================================
+    # Executing the functions 
+    # Creating separate dataframes
+    # Itermidiate caching of the dataframes
 
     
     @reactive.effect
@@ -212,13 +285,12 @@ with ui.nav_panel("Data"):  # Data panel
         
         buttered = raw_Buttered_df.get()
 
-        distances_for_each_cell_per_frame_df = du.calculate_traveled_distances_for_each_cell_per_frame(buttered) # Call the function to calculate distances for each cell per frame and create the Spot_statistics .csv file
-        direction_for_each_cell_per_frame_df = du.calculate_direction_of_travel_for_each_cell_per_frame(buttered) # Call the function to calculate direction_for_each_cell_per_frame_df
+        distances_for_each_cell_per_frame_df = du.calculate_traveled_distances_for_each_cell_per_frame(buttered)        # Call the function to calculate distances for each cell per frame and create the Spot_statistics .csv file
+        direction_for_each_cell_per_frame_df = du.calculate_direction_of_travel_for_each_cell_per_frame(buttered)       # Call the function to calculate direction_for_each_cell_per_frame_df
 
         Spot_stats_dfs = [buttered, distances_for_each_cell_per_frame_df, direction_for_each_cell_per_frame_df]
 
         Spot_stats = du.merge_dfs(Spot_stats_dfs, on=['TRACK_ID', 'POSITION_T'])
-        # Spot_stats.to_csv('Spot_stats.csv') # Saving the Spot_stats DataFrame into a newly created .csv file
 
         return Spot_stats
 

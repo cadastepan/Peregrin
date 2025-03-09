@@ -14,7 +14,7 @@ def dir_round(value, digits=3, direction='down'):
         return round(value, digits)
 
 
-def butter(df, ):
+def butter(df):
 
     unneccessary_float_columns = [  # Unneccesary float columns
         'ID', 
@@ -22,7 +22,7 @@ def butter(df, ):
         'POSITION_T', 
         'FRAME'
         ]
-
+    
     # Loads the data into a DataFrame
     df = pd.DataFrame(df)
 
@@ -73,6 +73,17 @@ def butter(df, ):
     df[unneccessary_float_columns] = df[unneccessary_float_columns].astype(int)
 
     return df
+
+
+# def buttering(df):
+#     if isinstance(df, list):
+#         for i in range(len(df)):
+#             df[i] = butter(df[i])
+#         return list(df)
+#     else:
+#         return butter(df)
+
+
 
 
 def calculate_traveled_distances_for_each_cell_per_frame(df):
