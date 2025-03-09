@@ -64,6 +64,8 @@ Spot_metrics = reactive.value()      # Creating a reactive value for the spot me
 
 count = reactive.value(1)            # Data input counter
 
+conditions = reactive.value()        # Creating a reactive value for the conditions
+
 
 
 Thresholding_metrics ={
@@ -110,10 +112,13 @@ Thresholding_filters = {
 
 
 # Directionality metric 
-# When downloading, I could make it possible to download the merged df and the separate datasets as well, in which case I would exclude the treatment column but rather include it in the name of the file
+# When downloading, I could make it possible to download the merged df and the separate datasets as well, in which case I would exclude the CONDITION column but rather include it in the name of the file
 # I may include some metadata as well for download such as the data of the analysis and what not idk
 # # I could also make it possible to download the data as a .txt file or .xlsx file
 # # # 2D visualization - gating
+# # # remove the percentile thresholding opptions
+# # # make the thresholding the way that inputs are, so that you can add and remove them
+# # # maybe an option in 1D/2D thresholding
 
 
 
@@ -143,8 +148,7 @@ with ui.nav_panel("Input"):
         def default_input():
             default_browser = ui.input_file("file1", "Input CSV", accept=[".csv"], multiple=True, placeholder="No files selected")
             default_label = ui.input_text("label1", "Data label", placeholder="write something")
-            default_use = ui.input_action_button("use1", "Use")   
-            return default_label, default_browser, default_use
+            return default_label, default_browser
 
 
         # =============================================================================================================================================================================================================================================================================
@@ -169,15 +173,11 @@ with ui.nav_panel("Input"):
                     label=f"Data label {adding}", 
                     placeholder="write something"
                     )
-                use = ui.input_action_button(                   # Button for applying visualization
-                    id=f"use_{adding}", 
-                    label="Use"
-                    )
 
                 ui.insert_ui(                                   # Rendering the additional input slot container
                     ui.div(                                     # container consisting of the label, browser and use button
                         {"id": f"additional-input-{adding}"}, 
-                        label, browser, use),
+                        label, browser),
                         selector="#data-inputs",
                         where="beforeEnd",
                 )
@@ -188,8 +188,10 @@ with ui.nav_panel("Input"):
             if input.less():                                    # REACTION:
                 removing = count.get()                          # Getting the current input count
                 ui.remove_ui(f"#additional-input-{removing}")   # Removing the last input slot (one with the current input count)
-                count.set(removing - 1)                         # Decreasing the input count
-
+                if count.get() > 1:                             # Decreasing the input count
+                    count.set(removing - 1)                     
+                else:
+                    pass
 
 
     @reactive.calc 
@@ -210,11 +212,11 @@ with ui.nav_panel("Input"):
                 buttered_dflt = du.butter(df_dflt)                                
 
                                                                     
-                label_dflt = input.label1()                                             # Getting the label to assign the 'TREATMENT' column parameter
+                label_dflt = input.label1()                                             # Getting the label to assign the 'CONDITION' column parameter
                 if not label_dflt or label_dflt is None:                                # If no label is provided, assign a default one
-                    buttered_dflt['TREATMENT'] = f"file_{file_count}"
+                    buttered_dflt['CONDITION'] = f"file_{file_count}"
                 else:                                                                   # Else, assign the given lable
-                    buttered_dflt['TREATMENT'] = f"{label_dflt} {file_count}"
+                    buttered_dflt['CONDITION'] = f"{label_dflt} {file_count}"
 
                 all_data_dflt.append(buttered_dflt)                                     # Store processed DataFrame
 
@@ -238,11 +240,11 @@ with ui.nav_panel("Input"):
                     df_addtnl = pd.read_csv(file_addtnl["datapath"])                  
                     buttered_addtnl = du.butter(df_addtnl)
 
-                    label_addtnl = input[f"label_{i}"]()                                # Getting the label to assign the 'TREATMENT' column parameter
+                    label_addtnl = input[f"label_{i}"]()                                # Getting the label to assign the 'CONDITION' column parameter
                     if not label_addtnl or label_addtnl is None:                        # If no label is provided, assign a default one
-                        buttered_addtnl['TREATMENT'] = f"file_{i}"
+                        buttered_addtnl['CONDITION'] = f"file_{i}"
                     else:                                                               # Else, assign the given lable
-                        buttered_addtnl['TREATMENT'] = f"{label_addtnl} {i}"
+                        buttered_addtnl['CONDITION'] = f"{label_addtnl} {i}"
 
                     all_data_addtnl.append(buttered_addtnl)                             # Store processed DataFrame
 
@@ -313,6 +315,8 @@ with ui.nav_panel("Data frames"):  # Data panel
             Spot_stats = process_spot_data()
             raw_Spot_stats_df.set(Spot_stats)
             Spot_metrics.set(Spot_stats.columns)
+            conditions.set(Spot_stats_df.get()['CONDITION'].astype(str).unique().tolist())
+
 
 
     @reactive.calc
@@ -335,8 +339,8 @@ with ui.nav_panel("Data frames"):  # Data panel
         Track_stats_dfs = [tracks_lengths_and_net_distances_df, confinement_ratios_df, track_directions_df, frames_per_track, speeds_per_cell]
         Track_stats = du.merge_dfs(Track_stats_dfs, on='TRACK_ID')
         Track_stats['CONFINEMENT_RATIO'] = Track_stats['NET_DISTANCE'] / Track_stats['TRACK_LENGTH']
-        Track_stats = du.merge_dfs(Track_stats_dfs, on='TRACK_ID')
-        # Track_stats.to_csv('Track_stats.csv', index=False) # Save the Track_stats created DataFrame into a newly created Track_stats_debugging.csv file
+        Track_stats = du.merge_dfs(Track_stats_dfs, 'TRACK_ID')
+        Track_stats = Track_stats.merge(Spot_stats[['CONDITION', 'TRACK_ID']].drop_duplicates(), on='TRACK_ID', how='inner')
 
         return Track_stats
 
@@ -360,8 +364,9 @@ with ui.nav_panel("Data frames"):  # Data panel
         Frame_stats_dfs = [distances_per_frame_df, absolute_directions_per_frame_df, weighted_directions_per_frame, speeds_per_frame]
 
         Frame_stats = du.merge_dfs(Frame_stats_dfs, on='POSITION_T')
+        Frame_stats = Frame_stats.merge(Spot_stats[['POSITION_T', 'CONDITION']].drop_duplicates(), on='POSITION_T', how='inner')
+
         Frame_stats = Frame_stats.fillna(0)
-        # Frame_stats.to_csv('Frame_stats.csv', index=False) # Save the Frame_stats created DataFrame into a newly created Frame_stats_debugging.csv file
 
         return Frame_stats
     
@@ -468,8 +473,7 @@ with ui.nav_panel("Data frames"):  # Data panel
 
 
 # ===========================================================================================================================================================================================================================================================================
-# Sidebar
-# ===========================================================================================================================================================================================================================================================================
+# Thresholding panel functions
 
 
 def update_slider(filter_type, slider, slider_values):
@@ -597,9 +601,27 @@ def make_panel():
 
 
 # ===========================================================================================================================================================================================================================================================================
-# Sidebar
+# Sidebar 
 
 with ui.sidebar(open="open", position="right", bg="f8f8f8"): 
+
+
+    # ===========================================================================================================================================================================================================================================================================
+    # Condition selection for visualizing
+    ui.input_select(
+        "condition",
+        "Select a condition to be vizualized",
+        choices=[]
+    )
+
+    @reactive.effect
+    def update_selection():
+        ui.update_select(
+            id="condition",
+            label="Select a condition to be vizualized",
+            choices=conditions.get(),
+        )
+
 
 
     # ===========================================================================================================================================================================================================================================================================

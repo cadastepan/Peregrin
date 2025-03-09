@@ -43,6 +43,7 @@ def butter(df):
     # The dataset itself has a very chaotic, multirow column "title system". Therefore in this list are again defined columns, which from now on will be used for consistency.
     df.columns = [
         'LABEL', 
+        # 'CONDITION',
         'ID', 
         'TRACK_ID', 
         'QUALITY', 
