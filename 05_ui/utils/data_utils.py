@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from math import floor, ceil
+import os.path as op
 
 
 
@@ -346,3 +347,7 @@ def values_for_a_metric(df, metric):
     max_value = ceil(df[metric].max())
     return min_value, max_value
 
+
+
+def filename_get(path):
+    return op.basename(path)

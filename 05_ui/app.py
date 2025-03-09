@@ -62,6 +62,8 @@ slider_valuesT4 = reactive.value()   # Creating a rective value for the slider v
 Track_metrics = reactive.value()   # Creating a reactive value for the track metrics
 Spot_metrics = reactive.value()    # Creating a reactive value for the spot metrics
 
+count = reactive.value(1)   # Creating a reactive value for the count of the data inputs
+
 
 
 Thresholding_metrics ={
@@ -100,7 +102,61 @@ Thresholding_filters = {
 
 with ui.nav_panel("Data"):  # Data panel
 
-    ui.input_file("file1", "Input CSV", accept=[".csv"], multiple=False)   # Input field
+    # ui.input_file("file1", "Input CSV", accept=[".csv"], multiple=True, placeholder="No files selected")   # Input field
+
+
+
+
+    with ui.div(id="data-inputs"):  # Data inputs
+
+        ui.input_action_button("more", "Add data input")
+        ui.input_action_button("less", "Remove data input")
+
+
+        @render.ui
+        def default_input():
+            return ui.input_file("file1", "Input CSV", accept=[".csv"], multiple=True, placeholder="No files selected")   # Input field
+
+
+        @reactive.effect
+        @reactive.event(input.more)
+        def uhm():
+            if input.more():
+                count.set(count.get() + 1)
+                adding = count.get()
+                browser = ui.input_file(f"file_{adding}", f"Input CSV {adding}", accept=[".csv"], multiple=True, placeholder="No files selected")
+
+                ui.insert_ui(
+                    ui.div(
+                        {"id": f"additional-input-{adding}"}, browser),
+                        selector="#data-inputs",
+                        where="beforeEnd",
+                )
+
+        @reactive.effect
+        @reactive.event(input.less)
+        def uh():
+            if input.less():
+                removing = count.get()
+                ui.remove_ui(f"#additional-input-{removing}")
+                count.set(removing - 1)
+        
+
+    # @render.text
+    # def text():
+    #     return f"Number of data inputs: {count.get()}"
+            
+        
+            
+
+                
+            
+
+            
+ 
+
+
+
 
     @reactive.calc # Decorator for a reactive function
     def parsed_file(): # File reading
@@ -108,29 +164,36 @@ with ui.nav_panel("Data"):  # Data panel
         if file is None:
             return pd.DataFrame()
         
+
+        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        #                     \/
         df = pd.read_csv(file[0]["datapath"])  # pyright: ignore[reportUnknownMemberType]
-
-
-        # ===========================================================================================================================================================================================================================================================================
-        # File cleaning
-        # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-        unneccessary_float_columns = [  # Unneccesary float columns
-            'ID', 
-            'TRACK_ID', 
-            'POSITION_T', 
-            'FRAME'
-            ]
-        buttered = du.butter(df, unneccessary_float_columns) # converting unnecessary float columns to int
+        buttered = du.butter(df) # cleansing multiple column labeling, selectively dropping NaN values, 
 
         return buttered
-
-
+    
     # =============================================================================================================================================================================================================================================================================
     # Executing the functions 
     # Creating separate dataframes
     # Itermidiate caching of the dataframes
 
+
+
+    
+
+
+# Directionality metric
+# Make it possible to input multiple data files while specifying the conditions for each of the data frames inputed 
+# For example, I would input 2 datasets from no treatment (control) - lets say i would get text input window popup to name what it is after each dataset (data file) input and so i would write something like ctr1 and ctr2 which would then be assigned to a column named treatment
+# The app should render the whole dataset in which the column treatment would have the str value assigned
+# When downloading, I could make it possible to download the merged df and the separate datasets as well, in which case I would exclude the treatment column but rather include it in the name of the file
+# I may include some metadata as well for download such as the data of the analysis and what not idk
+# # I could also make it possible to download the data as a .txt file or .xlsx file
+# # # 2D visualization - gating
+
+
+
+    
     @reactive.effect
     def update_buttered_df():
         file: list[FileInfo] | None = input.file1()
