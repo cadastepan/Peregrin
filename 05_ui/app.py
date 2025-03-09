@@ -196,58 +196,70 @@ with ui.nav_panel("Input"):
 
 
     @reactive.calc 
-    def parsed_file():                                              # File-reading 
+    def parsed_file():                                                          # File-reading 
+        
+        # =============================================================================================================================================================================================================================================================================
+        # Processing the default input files
 
-        all_data = []                                                   # List storing processed DataFrames
+        all_data_dflt = []                                                              # List storing processed DataFrames
+        inpt_file_list_dflt: list[FileInfo] | None = input.file1()                      # Getting the list of default input files
 
-        file_list: list[FileInfo] | None = input.file1()                # Getting the list of files
-
-        if file_list is None:
-            return pd.DataFrame()
+        if inpt_file_list_dflt is None:
+            default = pd.DataFrame()
         
         else:
-            for file_count, file in enumerate(file_list, start=1):      # Enumerate and cycle through files
-                df = pd.read_csv(file["datapath"])                     
-                buttered = du.butter(df)                                
+            for file_count, file_dflt in enumerate(inpt_file_list_dflt, start=1):       # Enumerate and cycle through default input files
+                df_dflt = pd.read_csv(file_dflt["datapath"])                     
+                buttered_dflt = du.butter(df_dflt)                                
 
                                                                     
-                label = input.label1()                                  # Getting the label to assign the 'TREATMENT' column parameter
-                if not label or label is None:                          # If no label is provided, assign a default one
-                    buttered['TREATMENT'] = f"file_{file_count}"
-                else:                                                   # Else, assign the given lable
-                    buttered['TREATMENT'] = f"{label} {file_count}"
+                label_dflt = input.label1()                                             # Getting the label to assign the 'TREATMENT' column parameter
+                if not label_dflt or label_dflt is None:                                # If no label is provided, assign a default one
+                    buttered_dflt['TREATMENT'] = f"file_{file_count}"
+                else:                                                                   # Else, assign the given lable
+                    buttered_dflt['TREATMENT'] = f"{label_dflt} {file_count}"
 
-                all_data.append(buttered)                               # Store processed DataFrame
+                all_data_dflt.append(buttered_dflt)                                     # Store processed DataFrame
 
-            return pd.concat(all_data)                                  # Return a joined DataFrame
+                default = pd.concat(all_data_dflt, axis=0)                              # Join the DataFrames
+                
+        # =============================================================================================================================================================================================================================================================================
+        # Processing the additional input files
 
-    @reactive.calc
-    def parsed_files():                                             # File-reading - additional data input slots
+        browse_count = count.get()                                                      # Getting the current additional input slot count
+        all_data_addtnl = []                                                            # List storing processed DataFrames                            
 
-        browse_count = count.get()                                      # Getting the current input count
-        all_data = []                                                   # List storing processed DataFrames                            
+        for i in range(2, browse_count + 1):                                            # Cycle trough the additional input slots 
 
-        for i in range(2, browse_count + 1):                            # Cycle trough the additional input slots 
+            inpt_file_list_addtnl: list[FileInfo] | None = input[f"file_{i}"]()         # Getting the list of files
 
-            file_list: list[FileInfo] | None = input[f"file_{i}"]()     # Getting the list of files
-
-            if file_list is None:
-                return pd.DataFrame()
+            if inpt_file_list_addtnl is None:
+                additional = pd.DataFrame()
             
             else:
-                for file in file_list:                                  # Enumerate and cycle through files
-                    df = pd.read_csv(file["datapath"])                  
-                    buttered = du.butter(df)
+                for file_addtnl in inpt_file_list_addtnl:                               # Enumerate and cycle through additional input files
+                    df_addtnl = pd.read_csv(file_addtnl["datapath"])                  
+                    buttered_addtnl = du.butter(df_addtnl)
 
-                    label = input[f"label_{i}"]()                       # Getting the label to assign the 'TREATMENT' column parameter
-                    if not label or label is None:                      # If no label is provided, assign a default one
-                        buttered['TREATMENT'] = f"file_{i}"
-                    else:                                               # Else, assign the given lable
-                        buttered['TREATMENT'] = f"{label} {i}"
+                    label_addtnl = input[f"label_{i}"]()                                # Getting the label to assign the 'TREATMENT' column parameter
+                    if not label_addtnl or label_addtnl is None:                        # If no label is provided, assign a default one
+                        buttered_addtnl['TREATMENT'] = f"file_{i}"
+                    else:                                                               # Else, assign the given lable
+                        buttered_addtnl['TREATMENT'] = f"{label_addtnl} {i}"
 
-                    all_data.append(buttered)                           # Store processed DataFrame
+                    all_data_addtnl.append(buttered_addtnl)                             # Store processed DataFrame
 
-                return pd.concat(all_data)                              # Return a joined DataFrame
+                    additional = pd.concat(all_data_addtnl, axis=0)                     # Join the DataFrames
+
+        # =============================================================================================================================================================================================================================================================================
+        # Merging the default and additional input files
+
+        if browse_count == 1:
+            return default
+        elif additional.empty:
+            return default
+        else:
+            return pd.concat([default, additional], axis=0)
 
 
 
