@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from math import floor, ceil
+import os.path as op
 
 
 
@@ -13,8 +14,15 @@ def dir_round(value, digits=3, direction='down'):
         return round(value, digits)
 
 
-def butter(df, float_columns):
+def butter(df):
 
+    unneccessary_float_columns = [  # Unneccesary float columns
+        'ID', 
+        'TRACK_ID', 
+        'POSITION_T', 
+        'FRAME'
+        ]
+    
     # Loads the data into a DataFrame
     df = pd.DataFrame(df)
 
@@ -62,9 +70,20 @@ def butter(df, float_columns):
     df = df.dropna(axis=1)
 
     # Here we convert the unnecessary floats (from the list in which we defined them) to integers
-    df[float_columns] = df[float_columns].astype(int)
+    df[unneccessary_float_columns] = df[unneccessary_float_columns].astype(int)
 
     return df
+
+
+# def buttering(df):
+#     if isinstance(df, list):
+#         for i in range(len(df)):
+#             df[i] = butter(df[i])
+#         return list(df)
+#     else:
+#         return butter(df)
+
+
 
 
 def calculate_traveled_distances_for_each_cell_per_frame(df):
@@ -339,3 +358,7 @@ def values_for_a_metric(df, metric):
     max_value = ceil(df[metric].max())
     return min_value, max_value
 
+
+
+def filename_get(path):
+    return op.basename(path)
