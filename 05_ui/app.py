@@ -147,7 +147,7 @@ with ui.nav_panel("Input"):
         @render.ui
         def default_input():
             default_browser = ui.input_file("file1", "Input CSV", accept=[".csv"], multiple=True, placeholder="No files selected")
-            default_label = ui.input_text("label1", "Data label", placeholder="write something")
+            default_label = ui.input_text("label1", "Condition 0", placeholder="write something")
             return default_label, default_browser
 
 
@@ -170,7 +170,7 @@ with ui.nav_panel("Input"):
                     )
                 label = ui.input_text(                          # Data labeling text window
                     id=f"label_{adding}", 
-                    label=f"Data label {adding}", 
+                    label=f"Condition {adding}", 
                     placeholder="write something"
                     )
 
@@ -200,16 +200,18 @@ with ui.nav_panel("Input"):
         # =============================================================================================================================================================================================================================================================================
         # Processing the default input files
 
-        all_data_dflt = []                                                              # List storing processed DataFrames
+                       
         inpt_file_list_dflt: list[FileInfo] | None = input.file1()                      # Getting the list of default input files
 
         if inpt_file_list_dflt is None:
             default = pd.DataFrame()
         
         else:
+            all_data_dflt = []
             for file_count, file_dflt in enumerate(inpt_file_list_dflt, start=1):       # Enumerate and cycle through default input files
                 df_dflt = pd.read_csv(file_dflt["datapath"])                     
-                buttered_dflt = du.butter(df_dflt)                                
+                buttered_dflt = du.butter(df_dflt)                 # Process the DataFrame
+
 
                                                                     
                 label_dflt = input.label1()                                             # Getting the label to assign the 'CONDITION' column parameter
@@ -218,15 +220,15 @@ with ui.nav_panel("Input"):
                 else:                                                                   # Else, assign the given lable
                     buttered_dflt['CONDITION'] = f"{label_dflt} {file_count}"
 
-                all_data_dflt.append(buttered_dflt)                                     # Store processed DataFrame
+                buttered_dflt = buttered_dflt.drop_duplicates()                          # Drop duplicates
+                all_data_dflt += [buttered_dflt]                                     # Store processed DataFrame
 
-                default = pd.concat(all_data_dflt, axis=0)                              # Join the DataFrames
+                default = pd.concat(all_data_dflt, axis=0)            # Join the DataFrames
                 
         # =============================================================================================================================================================================================================================================================================
         # Processing the additional input files
 
         browse_count = count.get()                                                      # Getting the current additional input slot count
-        all_data_addtnl = []                                                            # List storing processed DataFrames                            
 
         for i in range(2, browse_count + 1):                                            # Cycle trough the additional input slots 
 
@@ -236,6 +238,7 @@ with ui.nav_panel("Input"):
                 additional = pd.DataFrame()
             
             else:
+                all_data_addtnl = []                                                      # List storing processed DataFrames                            
                 for file_addtnl in inpt_file_list_addtnl:                               # Enumerate and cycle through additional input files
                     df_addtnl = pd.read_csv(file_addtnl["datapath"])                  
                     buttered_addtnl = du.butter(df_addtnl)
@@ -246,19 +249,21 @@ with ui.nav_panel("Input"):
                     else:                                                               # Else, assign the given lable
                         buttered_addtnl['CONDITION'] = f"{label_addtnl} {i}"
 
-                    all_data_addtnl.append(buttered_addtnl)                             # Store processed DataFrame
+                    buttered_addtnl = buttered_addtnl               # Drop duplicates
+                    all_data_addtnl += [buttered_addtnl]                                  # Store processed DataFrame
+                    
 
-                    additional = pd.concat(all_data_addtnl, axis=0)                     # Join the DataFrames
+                    additional = pd.concat(all_data_addtnl, axis=0)          # Join the DataFrames
 
         # =============================================================================================================================================================================================================================================================================
         # Merging the default and additional input files
 
         if browse_count == 1:
-            return default
+            return pd.DataFrame(default)
         elif additional.empty:
-            return default
+            return pd.DataFrame(default)
         else:
-            return pd.concat([default, additional], axis=0)
+            return pd.DataFrame(pd.concat([default, additional], axis=0))
 
 
 
@@ -300,8 +305,8 @@ with ui.nav_panel("Data frames"):  # Data panel
         direction_for_each_cell_per_frame_df = du.calculate_direction_of_travel_for_each_cell_per_frame(buttered)       # Call the function to calculate direction_for_each_cell_per_frame_df
 
         Spot_stats_dfs = [buttered, distances_for_each_cell_per_frame_df, direction_for_each_cell_per_frame_df]
-
-        Spot_stats = du.merge_dfs(Spot_stats_dfs, on=['TRACK_ID', 'POSITION_T'])
+        Spot_stats = du.merge_dfs(Spot_stats_dfs, on=['CONDITION', 'TRACK_ID', 'POSITION_T']) # Merge the dataframes
+        Spot_stats = Spot_stats.sort_values(by=['CONDITION','TRACK_ID', 'POSITION_T'])	
 
         return Spot_stats
 
@@ -315,7 +320,6 @@ with ui.nav_panel("Data frames"):  # Data panel
             Spot_stats = process_spot_data()
             raw_Spot_stats_df.set(Spot_stats)
             Spot_metrics.set(Spot_stats.columns)
-            conditions.set(Spot_stats_df.get()['CONDITION'].astype(str).unique().tolist())
 
 
 
@@ -337,10 +341,9 @@ with ui.nav_panel("Data frames"):  # Data panel
         speeds_per_cell = du.calculate_speed(Spot_stats, 'TRACK_ID')
 
         Track_stats_dfs = [tracks_lengths_and_net_distances_df, confinement_ratios_df, track_directions_df, frames_per_track, speeds_per_cell]
-        Track_stats = du.merge_dfs(Track_stats_dfs, on='TRACK_ID')
-        Track_stats['CONFINEMENT_RATIO'] = Track_stats['NET_DISTANCE'] / Track_stats['TRACK_LENGTH']
-        Track_stats = du.merge_dfs(Track_stats_dfs, 'TRACK_ID')
-        Track_stats = Track_stats.merge(Spot_stats[['CONDITION', 'TRACK_ID']].drop_duplicates(), on='TRACK_ID', how='inner')
+        Track_stats = du.merge_dfs(Track_stats_dfs, on=['CONDITION','TRACK_ID'])
+
+        Track_stats = Track_stats.sort_values(by=['CONDITION','TRACK_ID'])
 
         return Track_stats
 
@@ -358,15 +361,14 @@ with ui.nav_panel("Data frames"):  # Data panel
         
         distances_per_frame_df = du.calculate_distances_per_frame(Spot_stats) # Call the function to calculate distances_per_frame_df
         absolute_directions_per_frame_df = du.calculate_absolute_directions_per_frame(Spot_stats) # Call the function to calculate directions_per_frame_df
-        weighted_directions_per_frame = du.calculate_weighted_directions_per_frame(Spot_stats) # Call the function tp calculate weighted_directions_per_frame
-        speeds_per_frame = du.calculate_speed(Spot_stats, 'POSITION_T')
+        speeds_per_frame = du.calculate_speed(Spot_stats, 'POSITION_T') # Call the function to calculate speeds_per_frame
 
-        Frame_stats_dfs = [distances_per_frame_df, absolute_directions_per_frame_df, weighted_directions_per_frame, speeds_per_frame]
+        Frame_stats_dfs = [distances_per_frame_df, absolute_directions_per_frame_df, speeds_per_frame]
 
         Frame_stats = du.merge_dfs(Frame_stats_dfs, on='POSITION_T')
-        Frame_stats = Frame_stats.merge(Spot_stats[['POSITION_T', 'CONDITION']].drop_duplicates(), on='POSITION_T', how='inner')
+        Frame_stats = Frame_stats.merge(Spot_stats['POSITION_T'].drop_duplicates(), on='POSITION_T')
 
-        Frame_stats = Frame_stats.fillna(0)
+        Frame_stats = Frame_stats.sort_values(by=['CONDITION','POSITION_T'])
 
         return Frame_stats
     
