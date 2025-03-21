@@ -147,7 +147,7 @@ with ui.nav_panel("Input"):
         @render.ui
         def default_input():
             default_browser = ui.input_file("file1", "Input CSV", accept=[".csv"], multiple=True, placeholder="No files selected")
-            default_label = ui.input_text("label1", "Condition 0", placeholder="write something")
+            default_label = ui.input_text("label1", "Condition 1", placeholder="write something")
             return default_label, default_browser
 
 
@@ -200,7 +200,9 @@ with ui.nav_panel("Input"):
         # =============================================================================================================================================================================================================================================================================
         # Processing the default input files
 
-                       
+        default = pd.DataFrame()
+        additional = pd.DataFrame()
+                    
         inpt_file_list_dflt: list[FileInfo] | None = input.file1()                      # Getting the list of default input files
 
         if inpt_file_list_dflt is None:
@@ -208,29 +210,30 @@ with ui.nav_panel("Input"):
         
         else:
             all_data_dflt = []
-            for file_count, file_dflt in enumerate(inpt_file_list_dflt, start=1):       # Enumerate and cycle through default input files
+            for dflt_file_count, file_dflt in enumerate(inpt_file_list_dflt, start=1):       # Enumerate and cycle through default input files
                 df_dflt = pd.read_csv(file_dflt["datapath"])                     
-                buttered_dflt = du.butter(df_dflt)                 # Process the DataFrame
+                buttered_dflt = du.butter(df_dflt)                                      # Process the DataFrame
 
 
                                                                     
                 label_dflt = input.label1()                                             # Getting the label to assign the 'CONDITION' column parameter
                 if not label_dflt or label_dflt is None:                                # If no label is provided, assign a default one
-                    buttered_dflt['CONDITION'] = f"file_{file_count}"
+                    buttered_dflt['CONDITION'] = f"Condition {dflt_file_count}"
                 else:                                                                   # Else, assign the given lable
-                    buttered_dflt['CONDITION'] = f"{label_dflt} {file_count}"
+                    buttered_dflt['CONDITION'] = f"{label_dflt} {dflt_file_count}"
 
-                buttered_dflt = buttered_dflt.drop_duplicates()                          # Drop duplicates
-                all_data_dflt += [buttered_dflt]                                     # Store processed DataFrame
+                buttered_dflt = buttered_dflt                                           # Drop duplicates
+                all_data_dflt += [buttered_dflt]                                        # Store processed DataFrame
 
-                default = pd.concat(all_data_dflt, axis=0)            # Join the DataFrames
+                default = pd.concat(all_data_dflt, axis=0)                              # Join the DataFrames
                 
         # =============================================================================================================================================================================================================================================================================
         # Processing the additional input files
 
         browse_count = count.get()                                                      # Getting the current additional input slot count
+        all_data_addtnl = []                                                            # List storing processed DataFrames                            
 
-        for i in range(2, browse_count + 1):                                            # Cycle trough the additional input slots 
+        for i in range(2, browse_count + 1, 1):                                         # Cycle trough the additional input slots 
 
             inpt_file_list_addtnl: list[FileInfo] | None = input[f"file_{i}"]()         # Getting the list of files
 
@@ -238,32 +241,26 @@ with ui.nav_panel("Input"):
                 additional = pd.DataFrame()
             
             else:
-                all_data_addtnl = []                                                      # List storing processed DataFrames                            
-                for file_addtnl in inpt_file_list_addtnl:                               # Enumerate and cycle through additional input files
+                for additnl_file_count, file_addtnl in enumerate(inpt_file_list_addtnl, start=1):                             # Enumerate and cycle through additional input files
                     df_addtnl = pd.read_csv(file_addtnl["datapath"])                  
                     buttered_addtnl = du.butter(df_addtnl)
 
                     label_addtnl = input[f"label_{i}"]()                                # Getting the label to assign the 'CONDITION' column parameter
-                    if not label_addtnl or label_addtnl is None:                        # If no label is provided, assign a default one
-                        buttered_addtnl['CONDITION'] = f"file_{i}"
-                    else:                                                               # Else, assign the given lable
-                        buttered_addtnl['CONDITION'] = f"{label_addtnl} {i}"
+                    if not label_addtnl or label_addtnl is None:                                        # If no label is provided, assign a default one
+                        buttered_addtnl['CONDITION'] = f"Condition {additnl_file_count} (input {i})"
+                    else:                                                                               # Else, assign the given lable
+                        buttered_addtnl['CONDITION'] = f"{label_addtnl} {additnl_file_count}"
 
-                    buttered_addtnl = buttered_addtnl               # Drop duplicates
-                    all_data_addtnl += [buttered_addtnl]                                  # Store processed DataFrame
+                    buttered_addtnl = buttered_addtnl                                   # Drop duplicates
+                    all_data_addtnl += [buttered_addtnl]                                # Store processed DataFrame
                     
 
-                    additional = pd.concat(all_data_addtnl, axis=0)          # Join the DataFrames
+                    additional = pd.concat(all_data_addtnl, axis=0)                     # Join the DataFrames
 
         # =============================================================================================================================================================================================================================================================================
         # Merging the default and additional input files
 
-        if browse_count == 1:
-            return pd.DataFrame(default)
-        elif additional.empty:
-            return pd.DataFrame(default)
-        else:
-            return pd.DataFrame(pd.concat([default, additional], axis=0))
+        return pd.DataFrame(pd.concat([default, additional], axis=0))
 
 
 
@@ -320,6 +317,11 @@ with ui.nav_panel("Data frames"):  # Data panel
             Spot_stats = process_spot_data()
             raw_Spot_stats_df.set(Spot_stats)
             Spot_metrics.set(Spot_stats.columns)
+
+        
+        Spot_stats = process_spot_data()
+        raw_Spot_stats_df.set(Spot_stats)
+        Spot_metrics.set(Spot_stats.columns)
 
 
 
@@ -383,6 +385,11 @@ with ui.nav_panel("Data frames"):  # Data panel
             raw_Track_stats_df.set(Track_stats)
             Track_metrics.set(Track_stats.columns)
 
+        Track_stats = process_track_data()
+        raw_Track_stats_df.set(Track_stats)
+        Track_metrics.set(Track_stats.columns)
+
+
     @reactive.effect
     def update_Frame_stats_df():
         file: list[FileInfo] | None = input.file1()
@@ -392,6 +399,10 @@ with ui.nav_panel("Data frames"):  # Data panel
             Frame_stats = process_frame_data()
             raw_Frame_stats_df.set(Frame_stats)
             Frame_stats_df.set(Frame_stats)
+
+        Frame_stats = process_frame_data()
+        raw_Frame_stats_df.set(Frame_stats)
+        Frame_stats_df.set(Frame_stats)
 
 
     # =============================================================================================================================================================================================================================================================================
