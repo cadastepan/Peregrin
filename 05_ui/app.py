@@ -147,7 +147,7 @@ with ui.nav_panel("Input"):
         @render.ui
         def default_input():
             default_browser = ui.input_file("file1", "Input CSV", accept=[".csv"], multiple=True, placeholder="No files selected")
-            default_label = ui.input_text("label1", "Condition 1", placeholder="write something")
+            default_label = ui.input_text("label1", "Condition", placeholder="write something")
             return default_label, default_browser
 
 
@@ -162,15 +162,15 @@ with ui.nav_panel("Input"):
                 adding = count.get()                            # Getting the current input count
 
                 browser = ui.input_file(                        # CSV file browser
-                    id=f"file_{adding}", 
+                    id=f"file{adding}", 
                     label=f"Input CSV {adding}", 
                     accept=[".csv"], 
                     multiple=True, 
                     placeholder="No files selected"
                     )
                 label = ui.input_text(                          # Data labeling text window
-                    id=f"label_{adding}", 
-                    label=f"Condition {adding}", 
+                    id=f"label{adding}", 
+                    label=f"Condition", 
                     placeholder="write something"
                     )
 
@@ -218,7 +218,7 @@ with ui.nav_panel("Input"):
                                                                     
                 label_dflt = input.label1()                                             # Getting the label to assign the 'CONDITION' column parameter
                 if not label_dflt or label_dflt is None:                                # If no label is provided, assign a default one
-                    buttered_dflt['CONDITION'] = f"Condition {dflt_file_count}"
+                    buttered_dflt['CONDITION'] = f"Condition 1; file {dflt_file_count}"
                 else:                                                                   # Else, assign the given lable
                     buttered_dflt['CONDITION'] = f"{label_dflt} {dflt_file_count}"
 
@@ -235,7 +235,7 @@ with ui.nav_panel("Input"):
 
         for i in range(2, browse_count + 1, 1):                                         # Cycle trough the additional input slots 
 
-            inpt_file_list_addtnl: list[FileInfo] | None = input[f"file_{i}"]()         # Getting the list of files
+            inpt_file_list_addtnl: list[FileInfo] | None = input[f"file{i}"]()         # Getting the list of files
 
             if inpt_file_list_addtnl is None:
                 additional = pd.DataFrame()
@@ -245,9 +245,9 @@ with ui.nav_panel("Input"):
                     df_addtnl = pd.read_csv(file_addtnl["datapath"])                  
                     buttered_addtnl = du.butter(df_addtnl)
 
-                    label_addtnl = input[f"label_{i}"]()                                # Getting the label to assign the 'CONDITION' column parameter
+                    label_addtnl = input[f"label{i}"]()                                # Getting the label to assign the 'CONDITION' column parameter
                     if not label_addtnl or label_addtnl is None:                                        # If no label is provided, assign a default one
-                        buttered_addtnl['CONDITION'] = f"Condition {additnl_file_count} (input {i})"
+                        buttered_addtnl['CONDITION'] = f"Condition {i}; file {additnl_file_count}"
                     else:                                                                               # Else, assign the given lable
                         buttered_addtnl['CONDITION'] = f"{label_addtnl} {additnl_file_count}"
 
@@ -466,10 +466,6 @@ with ui.nav_panel("Data frames"):  # Data panel
                 with io.BytesIO() as buf:
                     Frame_stats_df.get().to_csv(buf, index=False)
                     yield buf.getvalue()
-    
-
-
-
 
 
 
@@ -1445,9 +1441,81 @@ with ui.nav_panel("Visualisation"):
                                             yield buf.getvalue()
 
 
+
+
+
+
+
+
 # ===========================================================================================================================================================================================================================================================================
-# Frame panel
+# Stistics
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Spot_subdataframes_global = reactive.value()
+Track_subdataframes_global = reactive.value()
+Frame_subdataframes_global = reactive.value()
+addtnl_labels_global = reactive.value()
+
+
+with ui.nav_panel("Statistics"):
+
+
+    @reactive.effect()
+    def extract():
+        file: list[FileInfo] | None = input.file1()
+        if file is None:
+            return pd.DataFrame()
+        else:
+            Spot_subdataframes = []
+            Track_subdataframes = []
+            Frame_subdataframes = []
+            
+            Spot_stats = Spot_stats_df.get()
+            Track_stats = Track_stats_df.get()
+            Frame_stats = Frame_stats_df.get()
+
+            browser_count = count.get()
+            for i in range(1, browser_count + 1, 1):
+                condition = input[f"label{i}"]()
+                Spot_stats_subdfs = Spot_stats[Spot_stats['CONDITION'].str.startswith(condition)]
+                Track_stats_subdfs = Track_stats[Track_stats['CONDITION'].str.startswith(condition)]
+                Frame_stats_subdfs = Frame_stats[Frame_stats['CONDITION'].str.startswith(condition)]
+                Spot_subdataframes.append(Spot_stats_subdfs)
+                Track_subdataframes.append(Track_stats_subdfs)
+                Frame_subdataframes.append(Frame_stats_subdfs)
+
+            Spot_subdataframes_global.set(Spot_subdataframes)
+            Track_subdataframes_global.set(Track_subdataframes)
+            Frame_subdataframes_global.set(Frame_subdataframes)
+
+
+    
+    @render.data_frame
+    def render_extract():
+        compiled_subdataframes = Track_subdataframes_global.get()
+        return render.DataGrid(compiled_subdataframes[1])
+        # return render.DataGrid()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ui.nav_spacer()  

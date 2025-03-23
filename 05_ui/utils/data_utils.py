@@ -275,3 +275,14 @@ def calculate_speed(df, variable):
     merged = merge_dfs(merging, on=['CONDITION',variable])
 
     return pd.DataFrame(merged)
+
+# def extract(df, starts_with):
+#     subdataframes = []
+#     unique_values = df['CONDITION'].unique()
+    
+#     for value in unique_values:
+#         # Create a copy to ensure the original dataframe is not modified.
+#         subdataframe = df[df['CONDITION'] == value].copy()
+#         subdataframes.append(subdataframe)
+    
+#     return subdataframes
