@@ -211,19 +211,17 @@ with ui.nav_panel("Input"):
         else:
             all_data_dflt = []
             for dflt_file_count, file_dflt in enumerate(inpt_file_list_dflt, start=1):       # Enumerate and cycle through default input files
-                df_dflt = pd.read_csv(file_dflt["datapath"])                     
+                df_dflt = pd.read_csv(file_dflt['datapath'])                     
                 buttered_dflt = du.butter(df_dflt)                                      # Process the DataFrame
-
-
-                                                                    
+                                                  
                 label_dflt = input.label1()                                             # Getting the label to assign the 'CONDITION' column parameter
                 if not label_dflt or label_dflt is None:                                # If no label is provided, assign a default one
-                    buttered_dflt['CONDITION'] = f"Condition 1; file {dflt_file_count}"
+                    buttered_dflt['CONDITION'] = 1
                 else:                                                                   # Else, assign the given lable
-                    buttered_dflt['CONDITION'] = f"{label_dflt} {dflt_file_count}"
+                    buttered_dflt['CONDITION'] = f'{label_dflt}'
+                buttered_dflt['REPLICATE'] = dflt_file_count
 
-                buttered_dflt = buttered_dflt                                           # Drop duplicates
-                all_data_dflt += [buttered_dflt]                                        # Store processed DataFrame
+                all_data_dflt.append(buttered_dflt)                                       # Store processed DataFrame
 
                 default = pd.concat(all_data_dflt, axis=0)                              # Join the DataFrames
                 
@@ -232,7 +230,6 @@ with ui.nav_panel("Input"):
 
         browse_count = count.get()                                                      # Getting the current additional input slot count
         all_data_addtnl = []                                                            # List storing processed DataFrames                            
-
         for i in range(2, browse_count + 1, 1):                                         # Cycle trough the additional input slots 
 
             inpt_file_list_addtnl: list[FileInfo] | None = input[f"file{i}"]()         # Getting the list of files
@@ -247,12 +244,12 @@ with ui.nav_panel("Input"):
 
                     label_addtnl = input[f"label{i}"]()                                # Getting the label to assign the 'CONDITION' column parameter
                     if not label_addtnl or label_addtnl is None:                                        # If no label is provided, assign a default one
-                        buttered_addtnl['CONDITION'] = f"Condition {i}; file {additnl_file_count}"
+                        buttered_addtnl['CONDITION'] = i
                     else:                                                                               # Else, assign the given lable
-                        buttered_addtnl['CONDITION'] = f"{label_addtnl} {additnl_file_count}"
+                        buttered_addtnl['CONDITION'] = f'{label_addtnl}'
+                    buttered_addtnl['REPLICATE'] = additnl_file_count
 
-                    buttered_addtnl = buttered_addtnl                                   # Drop duplicates
-                    all_data_addtnl += [buttered_addtnl]                                # Store processed DataFrame
+                    all_data_addtnl.append(buttered_addtnl)                                           # Store processed DataFrame
                     
 
                     additional = pd.concat(all_data_addtnl, axis=0)                     # Join the DataFrames
@@ -302,8 +299,8 @@ with ui.nav_panel("Data frames"):  # Data panel
         direction_for_each_cell_per_frame_df = du.calculate_direction_of_travel_for_each_cell_per_frame(buttered)       # Call the function to calculate direction_for_each_cell_per_frame_df
 
         Spot_stats_dfs = [buttered, distances_for_each_cell_per_frame_df, direction_for_each_cell_per_frame_df]
-        Spot_stats = du.merge_dfs(Spot_stats_dfs, on=['CONDITION', 'TRACK_ID', 'POSITION_T']) # Merge the dataframes
-        Spot_stats = Spot_stats.sort_values(by=['CONDITION','TRACK_ID', 'POSITION_T'])	
+        Spot_stats = du.merge_dfs(Spot_stats_dfs, on=['CONDITION', 'REPLICATE', 'TRACK_ID', 'POSITION_T']) # Merge the dataframes
+        Spot_stats = Spot_stats.sort_values(by=['CONDITION', 'REPLICATE', 'POSITION_T'])
 
         return Spot_stats
 
@@ -340,12 +337,12 @@ with ui.nav_panel("Data frames"):  # Data panel
         confinement_ratios_df = du.calculate_confinement_ratio_for_each_cell(tracks_lengths_and_net_distances_df) # Call the function to calculate confinement ratios from the Track_statistics1_df and write it into the Track_statistics1_df
         track_directions_df = du.calculate_absolute_directions_per_cell(Spot_stats) # Call the function to calculate directions_per_cell_df
         frames_per_track = du.calculate_number_of_frames_per_cell(Spot_stats)
-        speeds_per_cell = du.calculate_speed(Spot_stats, 'TRACK_ID')
+        speeds_per_cell = du.calculate_speed(Spot_stats, ['REPLICATE', 'TRACK_ID'])
 
         Track_stats_dfs = [tracks_lengths_and_net_distances_df, confinement_ratios_df, track_directions_df, frames_per_track, speeds_per_cell]
-        Track_stats = du.merge_dfs(Track_stats_dfs, on=['CONDITION','TRACK_ID'])
+        Track_stats = du.merge_dfs(Track_stats_dfs, on=['CONDITION', 'REPLICATE', 'TRACK_ID'])
 
-        Track_stats = Track_stats.sort_values(by=['CONDITION','TRACK_ID'])
+        Track_stats = Track_stats.sort_values(by=['CONDITION', 'REPLICATE', 'TRACK_ID'])
 
         return Track_stats
 
@@ -1460,41 +1457,46 @@ addtnl_labels_global = reactive.value()
 with ui.nav_panel("Statistics"):
 
 
-    @reactive.effect()
-    def extract():
-        file: list[FileInfo] | None = input.file1()
-        if file is None:
-            return pd.DataFrame()
-        else:
-            Spot_subdataframes = []
-            Track_subdataframes = []
-            Frame_subdataframes = []
+    # @reactive.effect()
+    # def extract():
+    #     file: list[FileInfo] | None = input.file1()
+    #     if file is None:
+    #         return pd.DataFrame()
+    #     else:
+    #         Spot_subdataframes = []
+    #         Track_subdataframes = []
+    #         Frame_subdataframes = []
             
-            Spot_stats = Spot_stats_df.get()
-            Track_stats = Track_stats_df.get()
-            Frame_stats = Frame_stats_df.get()
+    #         Spot_stats = Spot_stats_df.get()
+    #         Track_stats = Track_stats_df.get()
+    #         Frame_stats = Frame_stats_df.get()
 
-            browser_count = count.get()
-            for i in range(1, browser_count + 1, 1):
-                condition = input[f"label{i}"]()
-                Spot_stats_subdfs = Spot_stats[Spot_stats['CONDITION'].str.startswith(condition)]
-                Track_stats_subdfs = Track_stats[Track_stats['CONDITION'].str.startswith(condition)]
-                Frame_stats_subdfs = Frame_stats[Frame_stats['CONDITION'].str.startswith(condition)]
-                Spot_subdataframes.append(Spot_stats_subdfs)
-                Track_subdataframes.append(Track_stats_subdfs)
-                Frame_subdataframes.append(Frame_stats_subdfs)
+    #         browser_count = count.get()
+    #         for i in range(1, browser_count + 1, 1):
+    #             condition = input[f"label{i}"]()
+    #             Spot_stats_subdfs = Spot_stats[Spot_stats['CONDITION'].str.startswith(condition)]
+    #             Track_stats_subdfs = Track_stats[Track_stats['CONDITION'].str.startswith(condition)]
+    #             Frame_stats_subdfs = Frame_stats[Frame_stats['CONDITION'].str.startswith(condition)]
+    #             Spot_subdataframes.append(Spot_stats_subdfs)
+    #             Track_subdataframes.append(Track_stats_subdfs)
+    #             Frame_subdataframes.append(Frame_stats_subdfs)
 
-            Spot_subdataframes_global.set(Spot_subdataframes)
-            Track_subdataframes_global.set(Track_subdataframes)
-            Frame_subdataframes_global.set(Frame_subdataframes)
+    #         Spot_subdataframes_global.set(Spot_subdataframes)
+    #         Track_subdataframes_global.set(Track_subdataframes)
+    #         Frame_subdataframes_global.set(Frame_subdataframes)
 
 
     
-    @render.data_frame
-    def render_extract():
-        compiled_subdataframes = Track_subdataframes_global.get()
-        return render.DataGrid(compiled_subdataframes[1])
-        # return render.DataGrid()
+    # @render.data_frame
+    # def render_extract():
+    #     compiled_subdataframes = Track_subdataframes_global.get()
+    #     return render.DataGrid(compiled_subdataframes[1])
+    #     # return render.DataGrid()
+    with ui.layout_column_wrap(height='100%'):
+        with ui.card(full_screen=False):
+            @render.plot
+            def swarmplot():
+                return pu.swarm_plot(Track_stats_df.get(), 'NET_DISTANCE')
 
 
 

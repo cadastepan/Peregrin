@@ -6,6 +6,8 @@ from matplotlib.patches import FancyArrowPatch
 from scipy.stats import gaussian_kde
 from scipy.signal import savgol_filter
 from peregrin.scripts import PlotParams
+import seaborn as sns
+from itertools import combinations
 
 
 def histogram_frame_speed(df):
@@ -471,4 +473,63 @@ def histogram_cells_distance(df, metric, str):
     # plt.savefig(op.join(save_path, f"02f_Histogram_{str}_distance_traveled_per_cell.png"))
     # plt.show()
 
+    return plt.gcf()
+
+
+def swarm_plot(df, metric):
+    plt.figure(figsize=(10, 7.5))
+    
+    # Ensure CONDITION is treated as categorical
+    df['CONDITION'] = df['CONDITION'].astype(str)
+
+    swarm_size = 2.5
+    swarm_alpha = 0.5
+
+    violin_fill_color = 'whitesmoke'
+    violin_edge_color = 'lightgrey'
+    violin_alpha = 0.55
+
+    mean_span = 0.2
+    median_span = 0.185
+    line_width = 1.6
+    
+    sns.swarmplot(data=df, x='CONDITION', y=metric, hue='REPLICATE', palette='tab10', size=swarm_size, dodge=False, alpha=swarm_alpha, zorder=1, legend=False)
+    sns.despine()
+
+    replicate_means = df.groupby(['CONDITION', 'REPLICATE'])[metric].mean().reset_index()
+    sns.scatterplot(data=replicate_means, x='CONDITION', y=metric, hue='REPLICATE', palette='tab10', edgecolor='black', s=150, zorder=3, legend=False)
+    
+    sns.violinplot(data=df, x='CONDITION', y=metric, color=violin_fill_color, edgecolor=violin_edge_color, inner=None, alpha=violin_alpha, zorder=0)
+
+    # Calculate mean and median for each condition
+    condition_stats = df.groupby('CONDITION')[metric].agg(['mean', 'median']).reset_index()
+
+    # Plot mean and median lines for each condition using seaborn functions
+    for i, row in condition_stats.iterrows():
+        x_center = i # Adjust x-coordinate to start at the correct condition position
+        sns.lineplot(x=[x_center - mean_span, x_center + mean_span], y=[row['mean'], row['mean']], color='black', linestyle='-', linewidth=line_width, zorder=4, label='Mean' if i == 0 else "")
+        sns.lineplot(x=[x_center - median_span, x_center + median_span], y=[row['median'], row['median']], color='black', linestyle='--', linewidth=line_width, zorder=4, label='Median' if i == 0 else "")
+
+    ''' P-test
+    # Perform pairwise p-tests
+    conditions = df['CONDITION'].unique()
+    pairs = list(combinations(conditions, 2))
+    y_max = df[metric].max()
+    y_offset = (y_max * 0.1)  # Offset for p-value annotations
+    for i, (cond1, cond2) in enumerate(pairs):
+        data1 = df[df['CONDITION'] == cond1][metric]
+        data2 = df[df['CONDITION'] == cond2][metric]
+        stat, p_value = mannwhitneyu(data1, data2)
+        
+        # Annotate the plot with the p-value
+        x1, x2 = conditions.tolist().index(cond1), conditions.tolist().index(cond2)
+        y = y_max + y_offset * (i + 1)
+        plt.plot([x1, x1, x2, x2], [y+4.5, y + y_offset / 2.5, y + y_offset / 2.5, y+1.5], lw=1, color='black')
+        plt.text((x1 + x2) / 2, y + y_offset / 2, f'p = {round(p_value, 3):.3f}', ha='center', va='bottom', fontsize=10, color='black')
+    '''
+    
+    plt.legend(loc='upper right')
+    plt.title(f"Swarm Plot with Mean and Median Lines for {metric}")
+    plt.xlabel("Condition")
+    plt.ylabel(metric)
     return plt.gcf()
