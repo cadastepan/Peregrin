@@ -43,12 +43,8 @@ Frame_stats_df = reactive.value()
 # ===========================================================================================================================================================================================================================================================================
 # Creating reactive values for thresholding the data
 
-Spot_stats_df_T1 = reactive.value()
-Spot_stats_df_T2 = reactive.value()
-Spot_stats_df_T3 = reactive.value()
-Track_stats_df_T1 = reactive.value()
-Track_stats_df_T2 = reactive.value()
-Track_stats_df_T3 = reactive.value()
+Spot_stats_df_T = reactive.value()
+Track_stats_df_T = reactive.value()
 
 
 # ===========================================================================================================================================================================================================================================================================
@@ -667,7 +663,7 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
 
             @reactive.effect
             def update_thresholded_dataA():
-                return update_thresholded_data(input.metricA(), Track_stats_df_T1, Spot_stats_df_T1, raw_Track_stats_df, raw_Spot_stats_df, thresholded_dataA())
+                return update_thresholded_data(input.metricA(), Track_stats_df_T, Spot_stats_df_T, raw_Track_stats_df, raw_Spot_stats_df, thresholded_dataA())
 
             @render.plot
             def threshold_histogramA():
@@ -675,17 +671,17 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
 
             @render.text
             def data_thresholding_numbersA1():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T1)
+                a, b, c = data_thresholding_numbers(Track_stats_df_T)
                 return a
 
             @render.text
             def data_thresholding_numbersA2():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T1)
+                a, b, c = data_thresholding_numbers(Track_stats_df_T)
                 return b
 
             @render.text
             def data_thresholding_numbersA3():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T1)
+                a, b, c = data_thresholding_numbers(Track_stats_df_T)
                 return c
             
 
@@ -730,7 +726,7 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
 
             @reactive.effect
             def update_slider_valuesB():
-                return update_slider_values(input.metricB(), input.filterB(), Track_stats_df_T1.get(), Spot_stats_df_T1.get(), slider_valuesT2)
+                return update_slider_values(input.metricB(), input.filterB(), Track_stats_df_T.get(), Spot_stats_df_T.get(), slider_valuesT2)
 
 
             # ===========================================================================================================================================================================================================================================================================
@@ -738,15 +734,15 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
             
             @reactive.calc
             def thresholded_dataB():
-                return thresholded_data(input.filterB(), input.metricB(), input.sliderB(), Track_stats_df_T1.get(), Spot_stats_df_T1.get())
+                return thresholded_data(input.filterB(), input.metricB(), input.sliderB(), Track_stats_df_T.get(), Spot_stats_df_T.get())
 
             @reactive.effect
             def update_thresholded_dataB():
-                return update_thresholded_data(input.metricB(), Track_stats_df, Spot_stats_df, Track_stats_df_T1, Spot_stats_df_T1, thresholded_dataB())
+                return update_thresholded_data(input.metricB(), Track_stats_df, Spot_stats_df, Track_stats_df_T, Spot_stats_df_T, thresholded_dataB())
 
             @render.plot
             def threshold_histogramB():
-                return thresholded_histogram(input.metricB(), input.filterB(), input.sliderB(), Track_stats_df_T1, Spot_stats_df_T1)
+                return thresholded_histogram(input.metricB(), input.filterB(), input.sliderB(), Track_stats_df_T, Spot_stats_df_T)
 
             @render.text
             def data_thresholding_numbersB1():
