@@ -2,6 +2,9 @@ from shiny import reactive
 from shiny.express import input, render, ui
 from shiny.types import FileInfo
 
+import asyncio
+import time
+
 import pandas as pd
 import numpy as np
 import io
@@ -260,7 +263,30 @@ with ui.nav_panel("Input"):
 
 
 
-                
+
+
+file_detected = reactive.value(False)
+delayed_detection = reactive.value(False)
+cells_in_possesion = reactive.value(False)
+
+@reactive.effect
+def file_detection():
+    for i in range(1, count.get() + 1, 1):
+        if input[f"file{i}"]() != None:
+            cells_in_possesion.set(True)
+            file_detected.set(True)
+        else:
+            pass
+
+
+@reactive.calc
+async def file_detection_delay():
+    if file_detected.get():
+        await asyncio.sleep(2.5)
+        return True
+    else:
+        return False
+        
             
 
             
@@ -278,8 +304,7 @@ with ui.nav_panel("Data frames"):  # Data panel
     
     @reactive.effect
     def update_buttered_df():
-        file: list[FileInfo] | None = input.file1()
-        if file is None:
+        if file_detected.get() == False:
             return pd.DataFrame()
         
         df = parsed_file()  # Call the expensive function.
@@ -288,8 +313,7 @@ with ui.nav_panel("Data frames"):  # Data panel
 
     @reactive.calc
     def process_spot_data():
-        file: list[FileInfo] | None = input.file1()
-        if file is None:
+        if file_detected.get() == False:
             return pd.DataFrame()
         
         buttered = raw_Buttered_df.get()
@@ -306,9 +330,9 @@ with ui.nav_panel("Data frames"):  # Data panel
 
     @reactive.effect
     def update_Spot_stats_df():
-        file: list[FileInfo] | None = input.file1()
-        if file is None:
+        if file_detected.get() == False:
             return pd.DataFrame()
+        
         else:
             Spot_stats = process_spot_data()
             raw_Spot_stats_df.set(Spot_stats)
@@ -323,10 +347,9 @@ with ui.nav_panel("Data frames"):  # Data panel
 
     @reactive.calc
     def process_track_data():
-        file: list[FileInfo] | None = input.file1()
-        if file is None:
+        if file_detected.get() == False:
             return pd.DataFrame()
-
+        
         Spot_stats = raw_Spot_stats_df.get()
 
         if Spot_stats.empty:
@@ -348,8 +371,7 @@ with ui.nav_panel("Data frames"):  # Data panel
     
     @reactive.calc
     def process_frame_data():
-        file: list[FileInfo] | None = input.file1()
-        if file is None:
+        if file_detected.get() == False:
             return pd.DataFrame()
 
         Spot_stats = Spot_stats_df.get()
@@ -373,9 +395,9 @@ with ui.nav_panel("Data frames"):  # Data panel
 
     @reactive.effect
     def update_Track_stats_df():
-        file: list[FileInfo] | None = input.file1()
-        if file is None:
+        if file_detected.get() == False:
             return pd.DataFrame()
+        
         else:
             Track_stats = process_track_data()
             raw_Track_stats_df.set(Track_stats)
@@ -388,9 +410,9 @@ with ui.nav_panel("Data frames"):  # Data panel
 
     @reactive.effect
     def update_Frame_stats_df():
-        file: list[FileInfo] | None = input.file1()
-        if file is None:
+        if file_detected.get() == False:
             return pd.DataFrame()
+        
         else:
             Frame_stats = process_frame_data()
             raw_Frame_stats_df.set(Frame_stats)
@@ -412,9 +434,9 @@ with ui.nav_panel("Data frames"):  # Data panel
 
             @render.data_frame
             def render_spot_stats():
-                file: list[FileInfo] | None = input.file1()
-                if file is None:
+                if file_detected.get() == False:
                     return pd.DataFrame()
+        
                 else:
                     Spot_stats = Spot_stats_df.get()
                     return render.DataGrid(Spot_stats)
@@ -431,8 +453,7 @@ with ui.nav_panel("Data frames"):  # Data panel
             
             @render.data_frame
             def render_track_stats():
-                file: list[FileInfo] | None = input.file1()
-                if file is None:
+                if file_detected.get() == False:
                     return pd.DataFrame()
                 else:
                     Track_stats = Track_stats_df.get()
@@ -450,8 +471,7 @@ with ui.nav_panel("Data frames"):  # Data panel
 
             @render.data_frame
             def render_frame_stats():
-                file: list[FileInfo] | None = input.file1()
-                if file is None:
+                if file_detected.get() == False:
                     return pd.DataFrame()
                 else:
                     Frame_stats = Frame_stats_df.get()
@@ -526,7 +546,13 @@ def update_slider_values(metric, filter, dfA, dfB, slider_values):
             slider_values.set([0, 100])
     
 def thresholded_histogram(metric, filter_type, slider_range, dfA, dfB):
-    try:
+    if file_detected.get() == False:
+        return None
+    elif dfA == None:
+        return None
+    elif dfB == None:
+        return None
+    else:
         if metric in Track_metrics.get():
             data = dfA.get()
         elif metric in Spot_metrics.get():
@@ -561,13 +587,10 @@ def thresholded_histogram(metric, filter_type, slider_range, dfA, dfB):
         ax.spines[['top','left','right']].set_visible(False)
 
         return fig
-    
-    except ValueError:
-        return plt.figure()
 
 def data_thresholding_numbers(df):
     raw = raw_Track_stats_df.get().shape[0]
-    filtered = df.get().shape[0]
+    filtered = df.shape[0]
     filtered_out = raw - filtered
 
     # Filtered data in percents
@@ -587,6 +610,10 @@ def thresholded_data(filter_type, metric, slider_range, dfA, dfB):
             return du.literal_thresholding(dfA, metric, slider_range)
         elif metric in Spot_metrics.get():
             return du.literal_thresholding(dfB, metric, slider_range)
+        
+def set_thresholded_data(dfA, dfB, df0A, df0B):
+    dfA.set(df0A.get())
+    dfB.set(df0B.get())
 
 def update_thresholded_data(metric, dfA, dfB, df0A, df0B, thresholded_df):
     if metric in Track_metrics.get():
@@ -601,163 +628,213 @@ def update_thresholded_data(metric, dfA, dfB, df0A, df0B, thresholded_df):
 # ===========================================================================================================================================================================================================================================================================
 # Sidebar
 
+pass_check = reactive.value(True)
+
 with ui.sidebar(open="open", position="right", bg="f8f8f8"): 
 
 
+    @render.text
+    def first_thresholding():
+        return "Filter no. 1"
+
+    with ui.panel_well():
+
     # ===========================================================================================================================================================================================================================================================================
-    # Thresholding
+    # Creating a possibility for thresholding metric selection
+    # Creating a possibility for thresholding filter selection
+    # Creating a slider for thresholding
 
-    with ui.accordion(id="sidebar_acc"):
+        ui.input_select(  
+            "metricA",  
+            "Thresholding metric:",  
+            dict_Metrics 
+        )  
+
+        ui.input_select(
+            "filterA",
+            "Thresholding filter:",
+            Thresholding_filters
+        )
+
+        ui.input_slider(
+            "sliderA",
+            "Threshold",
+            min=0,
+            max=100,
+            value=(0, 100)
+        )
 
 
         # ===========================================================================================================================================================================================================================================================================
-        # Thresholding 1 panel
+        # Reactive functions updating the slider values
+        
+        @reactive.effect
+        def update_sliderA():
+            return update_slider(input.filterA(), "sliderA", slider_valuesT1)
 
-        with ui.accordion_panel(title="Tresholding"):
+        @reactive.effect
+        def update_slider_valuesA():
+            return update_slider_values(input.metricA(), input.filterA(), raw_Track_stats_df.get(), raw_Spot_stats_df.get(), slider_valuesT1)
 
-
-            # ===========================================================================================================================================================================================================================================================================
-            # Creating a possibility for thresholding metric selection
-            # Creating a possibility for thresholding filter selection
-            # Creating a slider for thresholding
-
-            ui.input_select(  
-                "metricA",  
-                "Thresholding metric:",  
-                dict_Metrics 
-            )  
-
-            ui.input_select(
-                "filterA",
-                "Thresholding filter:",
-                Thresholding_filters
-            )
-
-            ui.input_slider(
-                "sliderA",
-                "Threshold",
-                min=0,
-                max=100,
-                value=(0, 100)
-            )
-
-
-            # ===========================================================================================================================================================================================================================================================================
-            # Reactive functions updating the slider values
-            
-            @reactive.effect
-            def update_sliderA():
-                return update_slider(input.filterA(), "sliderA", slider_valuesT1)
-
-            @reactive.effect
-            def update_slider_valuesA():
-                return update_slider_values(input.metricA(), input.filterA(), raw_Track_stats_df.get(), raw_Spot_stats_df.get(), slider_valuesT1)
-
-
-            # ===========================================================================================================================================================================================================================================================================
-            # Thresholding the data based on percentiles
-            
-            @reactive.calc
-            def thresholded_dataA():
-                return thresholded_data(input.filterA(), input.metricA(), input.sliderA(), raw_Track_stats_df.get(), raw_Spot_stats_df.get())
-
-            @reactive.effect
-            def update_thresholded_dataA():
-                return update_thresholded_data(input.metricA(), Track_stats_df_T, Spot_stats_df_T, raw_Track_stats_df, raw_Spot_stats_df, thresholded_dataA())
-
-            @render.plot
-            def threshold_histogramA():
-                return thresholded_histogram(input.metricA(), input.filterA(), input.sliderA(), raw_Track_stats_df, raw_Spot_stats_df)
-
-            @render.text
-            def data_thresholding_numbersA1():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T)
-                return a
-
-            @render.text
-            def data_thresholding_numbersA2():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T)
-                return b
-
-            @render.text
-            def data_thresholding_numbersA3():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T)
-                return c
-            
 
         # ===========================================================================================================================================================================================================================================================================
-        # Thresholding 2 panel
+        # Thresholding the data based on percentiles
+        
+        @reactive.calc
+        def thresholded_dataA():
+            return thresholded_data(input.filterA(), input.metricA(), input.sliderA(), raw_Track_stats_df.get(), raw_Spot_stats_df.get())
 
-        with ui.accordion_panel(title="Tresholding 2"):
+        @reactive.effect
+        def set_thresholded_dataA():
+            if delayed_detection.get() == False:
+                set_thresholded_data(Track_stats_df_T, Spot_stats_df_T, raw_Track_stats_df, raw_Spot_stats_df)
+            else:
+                pass
 
+        @reactive.effect
+        @reactive.event(input.threshold1, input.threshold2)
+        def update_thresholded_dataA():
+            return update_thresholded_data(input.metricA(), Track_stats_df_T, Spot_stats_df_T, raw_Track_stats_df, raw_Spot_stats_df, thresholded_dataA())
 
-            # ===========================================================================================================================================================================================================================================================================
-            # Creating a possibility for thresholding metric selection
-            # Creating a possibility for thresholding filter selection
-            # Creating a slider for thresholding
+        @render.plot
+        def threshold_histogramA():
+            return thresholded_histogram(input.metricA(), input.filterA(), input.sliderA(), raw_Track_stats_df, raw_Spot_stats_df)
 
-            ui.input_select(  
-                "metricB",  
-                "Thresholding metric:",  
-                dict_Metrics 
-            )  
+        @render.text
+        def data_thresholding_numbersA1():
+            if cells_in_possesion.get() == False:
+                return None
+            a, b, c = data_thresholding_numbers(raw_Track_stats_df.get())
+            return a
 
-            ui.input_select(
-                "filterB",
-                "Thresholding filter:",
-                Thresholding_filters
-            )
-
-            ui.input_slider(
-                "sliderB",
-                "Threshold",
-                min=0,
-                max=100,
-                value=(0, 100)
-            )
-
-
-            # ===========================================================================================================================================================================================================================================================================
-            # Reactive functions updating the slider values
+        @render.text
+        def data_thresholding_numbersA2():
+            if cells_in_possesion.get() == False:
+                return None
+            a, b, c = data_thresholding_numbers(Track_stats_df_T.get())
+            return b
             
-            @reactive.effect
-            def update_sliderB():
-                return update_slider(input.filterB(), "sliderB", slider_valuesT2)
+        @render.text
+        def data_thresholding_numbersA3():
+            if cells_in_possesion.get() == False:
+                return None
+            a, b, c = data_thresholding_numbers(Track_stats_df_T.get())
+            return c
+    
+    @ui.bind_task_button(button_id="threshold2")
+    @reactive.extended_task
+    async def thresholding1():
+        await asyncio.sleep(4.5)
+        
+    ui.input_task_button("threshold2", "Apply")
+    
 
-            @reactive.effect
-            def update_slider_valuesB():
-                return update_slider_values(input.metricB(), input.filterB(), Track_stats_df_T.get(), Spot_stats_df_T.get(), slider_valuesT2)
-
-
-            # ===========================================================================================================================================================================================================================================================================
-            # Thresholding the data based on percentiles
             
-            @reactive.calc
-            def thresholded_dataB():
-                return thresholded_data(input.filterB(), input.metricB(), input.sliderB(), Track_stats_df_T.get(), Spot_stats_df_T.get())
+        
 
-            @reactive.effect
-            def update_thresholded_dataB():
-                return update_thresholded_data(input.metricB(), Track_stats_df, Spot_stats_df, Track_stats_df_T, Spot_stats_df_T, thresholded_dataB())
+# ===========================================================================================================================================================================================================================================================================
+# Thresholding 2 panel
 
-            @render.plot
-            def threshold_histogramB():
-                return thresholded_histogram(input.metricB(), input.filterB(), input.sliderB(), Track_stats_df_T, Spot_stats_df_T)
+# with ui.accordion_panel(title="Tresholding 2"):
 
-            @render.text
-            def data_thresholding_numbersB1():
-                a, b, c = data_thresholding_numbers(Track_stats_df)
-                return a
+    @render.text
+    def second_thresholding():
+        return "Filter no. 2"
 
-            @render.text
-            def data_thresholding_numbersB2():
-                a, b, c = data_thresholding_numbers(Track_stats_df)
-                return b
+    with ui.panel_well():
 
-            @render.text
-            def data_thresholding_numbersB3():
-                a, b, c = data_thresholding_numbers(Track_stats_df)
-                return c
+        # ===========================================================================================================================================================================================================================================================================
+        # Creating a possibility for thresholding metric selection
+        # Creating a possibility for thresholding filter selection
+        # Creating a slider for thresholding
+
+        ui.input_select(  
+            id="metricB",  
+            label="Thresholding metric:",  
+            choices=dict_Metrics ,
+            selected="NUM_FRAMES"
+        )  
+
+        ui.input_select(
+            "filterB",
+            "Thresholding filter:",
+            Thresholding_filters
+        )
+
+        ui.input_slider(
+            "sliderB",
+            "Threshold",
+            min=0,
+            max=100,
+            value=(0, 100)
+        )
+
+
+        # ===========================================================================================================================================================================================================================================================================
+        # Reactive functions updating the slider values
+        
+        @reactive.effect
+        def update_sliderB():
+            return update_slider(input.filterB(), "sliderB", slider_valuesT2)
+
+        @reactive.effect
+        def update_slider_valuesB():
+            return update_slider_values(input.metricB(), input.filterB(), Track_stats_df_T.get(), Spot_stats_df_T.get(), slider_valuesT2)
+
+
+        # ===========================================================================================================================================================================================================================================================================
+        # Thresholding the data based on percentiles
+        
+        @reactive.calc
+        def thresholded_dataB():
+            return thresholded_data(input.filterB(), input.metricB(), input.sliderB(), Track_stats_df_T.get(), Spot_stats_df_T.get())
+
+        @reactive.effect
+        def set_thresholded_dataB():
+            if delayed_detection.get() == False:
+                set_thresholded_data(Track_stats_df, Spot_stats_df, Track_stats_df_T, Spot_stats_df_T)
+            else:
+                pass
+            
+        @reactive.effect
+        @reactive.event(input.threshold1, input.threshold2)
+        def update_thresholded_dataB():
+            return update_thresholded_data(input.metricB(), Track_stats_df, Spot_stats_df, Track_stats_df_T, Spot_stats_df_T, thresholded_dataB())
+
+        @render.plot
+        def threshold_histogramB():
+            return thresholded_histogram(input.metricB(), input.filterB(), input.sliderB(), Track_stats_df_T, Spot_stats_df_T)
+
+        @render.text
+        def data_thresholding_numbersB1():
+            if cells_in_possesion.get() == False:
+                return None
+            a, b, c = data_thresholding_numbers(Track_stats_df.get())
+            return a
+
+        @render.text
+        def data_thresholding_numbersB2():
+            if cells_in_possesion.get() == False:
+                return None
+            a, b, c = data_thresholding_numbers(Track_stats_df.get())
+            return b
+
+        @render.text
+        def data_thresholding_numbersB3():
+            if cells_in_possesion.get() == False:
+                return None
+            a, b, c = data_thresholding_numbers(Track_stats_df.get())
+            return c
+        
+
+    @ui.bind_task_button(button_id="threshold1")
+    @reactive.extended_task
+    async def thresholding2():
+        await asyncio.sleep(4.5)
+        
+    ui.input_task_button("threshold1", "Apply")
+
+
             
 
 
