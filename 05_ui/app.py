@@ -33,6 +33,14 @@ raw_Frame_stats_df = reactive.value()
 
 
 # ===========================================================================================================================================================================================================================================================================
+# Creating reactive variables for processed dataframe storage
+
+Buttered_df = reactive.value()
+Spot_stats_df = reactive.value()
+Track_stats_df = reactive.value()
+Frame_stats_df = reactive.value()
+
+# ===========================================================================================================================================================================================================================================================================
 # Creating reactive values for thresholding the data
 
 Spot_stats_df_T1 = reactive.value()
@@ -44,31 +52,22 @@ Track_stats_df_T3 = reactive.value()
 
 
 # ===========================================================================================================================================================================================================================================================================
-# Creating reactive variables for processed dataframe storage
-
-Buttered_df = reactive.value()
-Spot_stats_df = reactive.value()
-Track_stats_df = reactive.value()
-Frame_stats_df = reactive.value()
-
-
-# ===========================================================================================================================================================================================================================================================================
 # Creating other reactive variables 
 
-slider_valuesT1 = reactive.value()   # Creating a rective value for the slider values
-slider_valuesT2 = reactive.value()   # Creating a rective value for the slider values
-slider_valuesT3 = reactive.value()   # Creating a rective value for the slider values
-slider_valuesT4 = reactive.value()   # Creating a rective value for the slider values
 Track_metrics = reactive.value()     # Creating a reactive value for the track metrics
 Spot_metrics = reactive.value()      # Creating a reactive value for the spot metrics
 
+slider_valuesT1 = reactive.value()   # Creating a reactive value for the slider values for thresholding 1
+slider_valuesT2 = reactive.value()   # Creating a reactive value for the slider values for thresholding 2
+slider_valuesT3 = reactive.value()   # Creating a reactive value for the slider values for thresholding 3
 count = reactive.value(1)            # Data input counter
 
+
+slider_values = reactive.value()     # Creating a reactive value for the slider values
 conditions = reactive.value()        # Creating a reactive value for the conditions
 
 
-
-Thresholding_metrics ={
+dict_Track_metrics = {
     "TRACK_LENGTH": "Track length", 
     "NET_DISTANCE": "Net distance", 
     "CONFINEMENT_RATIO": "Confinement ratio",
@@ -82,13 +81,17 @@ Thresholding_metrics ={
     "MEAN_DIRECTION_RAD": "Mean direction (radians)",
     "STD_DEVIATION_DEG": "Standard deviation (degrees)",
     "STD_DEVIATION_RAD": "Standard deviation (radians)",
+}
 
+dict_Spot_metrics ={
     "POSITION_T": "Position t",
     "POSITION_X": "Position x",
     "POSITION_Y": "Position y",
     "QUALITY": "Quality",
     "VISIBILITY": "Visibility"
 }
+
+dict_Metrics = dict_Track_metrics | dict_Spot_metrics
 
 Thresholding_filters = {
     "literal": "Literal",
@@ -137,8 +140,8 @@ with ui.nav_panel("Input"):
         # =============================================================================================================================================================================================================================================================================
         # Buttons for adding and removing additional data input
 
-        ui.input_action_button("more", "Add data input")
-        ui.input_action_button("less", "Remove data input")
+        ui.input_action_button("add_input", "Add data input")
+        ui.input_action_button("remove_input", "Remove data input")
 
 
         # =============================================================================================================================================================================================================================================================================
@@ -155,9 +158,9 @@ with ui.nav_panel("Input"):
         # Additional data input slots - reacting on the buttons
 
         @reactive.effect
-        @reactive.event(input.more)                             # "Add data input" button sensor
-        def add_inputs():
-            if input.more():                                    # REACTION:
+        @reactive.event(input.add_input)                             # "Add data input" button sensor
+        def add_rowser():
+            if input.add_input():                                    # REACTION:
                 count.set(count.get() + 1)                      # Increasing the input count
                 adding = count.get()                            # Getting the current input count
 
@@ -183,9 +186,9 @@ with ui.nav_panel("Input"):
                 )
 
         @reactive.effect
-        @reactive.event(input.less)                             # "Remove data input" button sensor
-        def remove_inputs():
-            if input.less():                                    # REACTION:
+        @reactive.event(input.remove_input)                             # "Remove data input" button sensor
+        def remove_browser():
+            if input.remove_input():                                    # REACTION:
                 removing = count.get()                          # Getting the current input count
                 ui.remove_ui(f"#additional-input-{removing}")   # Removing the last input slot (one with the current input count)
                 if count.get() > 1:                             # Decreasing the input count
@@ -211,19 +214,17 @@ with ui.nav_panel("Input"):
         else:
             all_data_dflt = []
             for dflt_file_count, file_dflt in enumerate(inpt_file_list_dflt, start=1):       # Enumerate and cycle through default input files
-                df_dflt = pd.read_csv(file_dflt["datapath"])                     
+                df_dflt = pd.read_csv(file_dflt['datapath'])                     
                 buttered_dflt = du.butter(df_dflt)                                      # Process the DataFrame
-
-
-                                                                    
+                                                  
                 label_dflt = input.label1()                                             # Getting the label to assign the 'CONDITION' column parameter
                 if not label_dflt or label_dflt is None:                                # If no label is provided, assign a default one
-                    buttered_dflt['CONDITION'] = f"Condition 1; file {dflt_file_count}"
+                    buttered_dflt['CONDITION'] = 1
                 else:                                                                   # Else, assign the given lable
-                    buttered_dflt['CONDITION'] = f"{label_dflt} {dflt_file_count}"
+                    buttered_dflt['CONDITION'] = f'{label_dflt}'
+                buttered_dflt['REPLICATE'] = dflt_file_count
 
-                buttered_dflt = buttered_dflt                                           # Drop duplicates
-                all_data_dflt += [buttered_dflt]                                        # Store processed DataFrame
+                all_data_dflt.append(buttered_dflt)                                       # Store processed DataFrame
 
                 default = pd.concat(all_data_dflt, axis=0)                              # Join the DataFrames
                 
@@ -232,7 +233,6 @@ with ui.nav_panel("Input"):
 
         browse_count = count.get()                                                      # Getting the current additional input slot count
         all_data_addtnl = []                                                            # List storing processed DataFrames                            
-
         for i in range(2, browse_count + 1, 1):                                         # Cycle trough the additional input slots 
 
             inpt_file_list_addtnl: list[FileInfo] | None = input[f"file{i}"]()         # Getting the list of files
@@ -247,12 +247,12 @@ with ui.nav_panel("Input"):
 
                     label_addtnl = input[f"label{i}"]()                                # Getting the label to assign the 'CONDITION' column parameter
                     if not label_addtnl or label_addtnl is None:                                        # If no label is provided, assign a default one
-                        buttered_addtnl['CONDITION'] = f"Condition {i}; file {additnl_file_count}"
+                        buttered_addtnl['CONDITION'] = i
                     else:                                                                               # Else, assign the given lable
-                        buttered_addtnl['CONDITION'] = f"{label_addtnl} {additnl_file_count}"
+                        buttered_addtnl['CONDITION'] = f'{label_addtnl}'
+                    buttered_addtnl['REPLICATE'] = additnl_file_count
 
-                    buttered_addtnl = buttered_addtnl                                   # Drop duplicates
-                    all_data_addtnl += [buttered_addtnl]                                # Store processed DataFrame
+                    all_data_addtnl.append(buttered_addtnl)                                           # Store processed DataFrame
                     
 
                     additional = pd.concat(all_data_addtnl, axis=0)                     # Join the DataFrames
@@ -302,8 +302,8 @@ with ui.nav_panel("Data frames"):  # Data panel
         direction_for_each_cell_per_frame_df = du.calculate_direction_of_travel_for_each_cell_per_frame(buttered)       # Call the function to calculate direction_for_each_cell_per_frame_df
 
         Spot_stats_dfs = [buttered, distances_for_each_cell_per_frame_df, direction_for_each_cell_per_frame_df]
-        Spot_stats = du.merge_dfs(Spot_stats_dfs, on=['CONDITION', 'TRACK_ID', 'POSITION_T']) # Merge the dataframes
-        Spot_stats = Spot_stats.sort_values(by=['CONDITION','TRACK_ID', 'POSITION_T'])	
+        Spot_stats = du.merge_dfs(Spot_stats_dfs, on=['CONDITION', 'REPLICATE', 'TRACK_ID', 'POSITION_T']) # Merge the dataframes
+        Spot_stats = Spot_stats.sort_values(by=['CONDITION', 'REPLICATE', 'POSITION_T'])
 
         return Spot_stats
 
@@ -340,12 +340,12 @@ with ui.nav_panel("Data frames"):  # Data panel
         confinement_ratios_df = du.calculate_confinement_ratio_for_each_cell(tracks_lengths_and_net_distances_df) # Call the function to calculate confinement ratios from the Track_statistics1_df and write it into the Track_statistics1_df
         track_directions_df = du.calculate_absolute_directions_per_cell(Spot_stats) # Call the function to calculate directions_per_cell_df
         frames_per_track = du.calculate_number_of_frames_per_cell(Spot_stats)
-        speeds_per_cell = du.calculate_speed(Spot_stats, 'TRACK_ID')
+        speeds_per_cell = du.calculate_speed(Spot_stats, ['REPLICATE', 'TRACK_ID'])
 
         Track_stats_dfs = [tracks_lengths_and_net_distances_df, confinement_ratios_df, track_directions_df, frames_per_track, speeds_per_cell]
-        Track_stats = du.merge_dfs(Track_stats_dfs, on=['CONDITION','TRACK_ID'])
+        Track_stats = du.merge_dfs(Track_stats_dfs, on=['CONDITION', 'REPLICATE', 'TRACK_ID'])
 
-        Track_stats = Track_stats.sort_values(by=['CONDITION','TRACK_ID'])
+        Track_stats = Track_stats.sort_values(by=['CONDITION', 'REPLICATE', 'TRACK_ID'])
 
         return Track_stats
 
@@ -482,7 +482,8 @@ with ui.nav_panel("Data frames"):  # Data panel
 
 
 # ===========================================================================================================================================================================================================================================================================
-# Thresholding panel functions
+# Sidebar
+# ===========================================================================================================================================================================================================================================================================
 
 
 def update_slider(filter_type, slider, slider_values):
@@ -599,38 +600,12 @@ def update_thresholded_data(metric, dfA, dfB, df0A, df0B, thresholded_df):
         dfB.set(thresholded_df)
         dfA.set(du.dataframe_filter(df0A.get(), dfB.get()))
 
-def make_panel():
-    try:
-        return ui.accordion_panel(
-            title="Section",
-            content=("Content of the new section")
-        )
-    except AttributeError:
-        pass
 
 
 # ===========================================================================================================================================================================================================================================================================
-# Sidebar 
+# Sidebar
 
 with ui.sidebar(open="open", position="right", bg="f8f8f8"): 
-
-
-    # ===========================================================================================================================================================================================================================================================================
-    # Condition selection for visualizing
-    ui.input_select(
-        "condition",
-        "Select a condition to be vizualized",
-        choices=[]
-    )
-
-    @reactive.effect
-    def update_selection():
-        ui.update_select(
-            id="condition",
-            label="Select a condition to be vizualized",
-            choices=conditions.get(),
-        )
-
 
 
     # ===========================================================================================================================================================================================================================================================================
@@ -653,7 +628,7 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
             ui.input_select(  
                 "metricA",  
                 "Thresholding metric:",  
-                Thresholding_metrics 
+                dict_Metrics 
             )  
 
             ui.input_select(
@@ -728,7 +703,7 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
             ui.input_select(  
                 "metricB",  
                 "Thresholding metric:",  
-                Thresholding_metrics 
+                dict_Metrics 
             )  
 
             ui.input_select(
@@ -767,7 +742,7 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
 
             @reactive.effect
             def update_thresholded_dataB():
-                return update_thresholded_data(input.metricB(), Track_stats_df_T2, Spot_stats_df_T2, Track_stats_df_T1, Spot_stats_df_T1, thresholded_dataB())
+                return update_thresholded_data(input.metricB(), Track_stats_df, Spot_stats_df, Track_stats_df_T1, Spot_stats_df_T1, thresholded_dataB())
 
             @render.plot
             def threshold_histogramB():
@@ -775,206 +750,19 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
 
             @render.text
             def data_thresholding_numbersB1():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T2)
+                a, b, c = data_thresholding_numbers(Track_stats_df)
                 return a
 
             @render.text
             def data_thresholding_numbersB2():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T2)
+                a, b, c = data_thresholding_numbers(Track_stats_df)
                 return b
 
             @render.text
             def data_thresholding_numbersB3():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T2)
-                return c
-            
-
-        # ===========================================================================================================================================================================================================================================================================
-        # Thresholding 3 panel
-
-        with ui.accordion_panel(title="Tresholding 3"):
-            
-            
-            # ===========================================================================================================================================================================================================================================================================
-            # Creating a possibility for thresholding metric selection
-            # Creating a possibility for thresholding filter selection
-            # Creating a slider for thresholding
-
-            ui.input_select(  
-                "metricC",  
-                "Thresholding metric:",  
-                Thresholding_metrics 
-            )  
-
-            ui.input_select(
-                "filterC",
-                "Thresholding filter:",
-                Thresholding_filters
-            )
-
-            ui.input_slider(
-                "sliderC",
-                "Threshold",
-                min=0,
-                max=100,
-                value=(0, 100)
-            )
-
-
-            # ===========================================================================================================================================================================================================================================================================
-            # Reactive functions updating the slider values
-            
-            @reactive.effect
-            def update_sliderC():
-                return update_slider(input.filterC(), "sliderC", slider_valuesT3)
-
-            @reactive.effect
-            def update_slider_valuesC():
-                return update_slider_values(input.metricC(), input.filterC(), Track_stats_df_T2.get(), Spot_stats_df_T2.get(), slider_valuesT3)
-
-
-            # ===========================================================================================================================================================================================================================================================================
-            # Thresholding the data based on percentiles
-            
-            @reactive.calc
-            def thresholded_dataC():
-                return thresholded_data(input.filterC(), input.metricC(), input.sliderC(), Track_stats_df_T2.get(), Spot_stats_df_T2.get())
-
-            @reactive.effect
-            def update_thresholded_dataC():
-                return update_thresholded_data(input.metricC(), Track_stats_df_T3, Spot_stats_df_T3, Track_stats_df_T2, Spot_stats_df_T2, thresholded_dataC())
-
-            @render.plot
-            def threshold_histogramC():
-                return thresholded_histogram(input.metricC(), input.filterC(), input.sliderC(), Track_stats_df_T2, Spot_stats_df_T2)
-
-            @render.text
-            def data_thresholding_numbersC1():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T3)
-                return a
-
-            @render.text
-            def data_thresholding_numbersC2():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T3)
-                return b
-
-            @render.text
-            def data_thresholding_numbersC3():
-                a, b, c = data_thresholding_numbers(Track_stats_df_T3)
-                return c
-    
-
-        # ===========================================================================================================================================================================================================================================================================
-        # Thresholding 4 panel
-
-        with ui.accordion_panel(title="Tresholding 4"):
-            
-            
-            # ===========================================================================================================================================================================================================================================================================
-            # Creating a possibility for thresholding metric selection
-            # Creating a possibility for thresholding filter selection
-            # Creating a slider for thresholding
-
-            ui.input_select(  
-                "metricD",  
-                "Thresholding metric:",  
-                Thresholding_metrics 
-            )  
-
-            ui.input_select(
-                "filterD",
-                "Thresholding filter:",
-                Thresholding_filters
-            )
-
-            ui.input_slider(
-                "sliderD",
-                "Threshold",
-                min=0,
-                max=100,
-                value=(0, 100)
-            )
-
-
-            # ===========================================================================================================================================================================================================================================================================
-            # Reactive functions updating the slider values
-            
-            @reactive.effect
-            def update_sliderD():
-                return update_slider(input.filterD(), "sliderD", slider_valuesT4)
-
-            @reactive.effect
-            def update_slider_valuesD():
-                return update_slider_values(input.metricD(), input.filterD(), Track_stats_df_T3.get(), Spot_stats_df_T3.get(), slider_valuesT4)
-
-
-            # ===========================================================================================================================================================================================================================================================================
-            # Thresholding the data based on percentiles
-            
-            @reactive.calc
-            def thresholded_dataD():
-                return thresholded_data(input.filterD(), input.metricD(), input.sliderD(), Track_stats_df_T3.get(), Spot_stats_df_T3.get())
-
-            @reactive.effect
-            def update_thresholded_dataD():
-                return update_thresholded_data(input.metricD(), Track_stats_df, Spot_stats_df, Track_stats_df_T3, Spot_stats_df_T3, thresholded_dataD())
-
-            @render.plot
-            def threshold_histogramD():
-                return thresholded_histogram(input.metricD(), input.filterD(), input.sliderD(), Track_stats_df_T3, Spot_stats_df_T3)
-
-            @render.text
-            def data_thresholding_numbersD1():
-                a, b, c = data_thresholding_numbers(Track_stats_df)
-                return a
-
-            @render.text
-            def data_thresholding_numbersD2():
-                a, b, c = data_thresholding_numbers(Track_stats_df)
-                return b
-
-            @render.text
-            def data_thresholding_numbersD3():
                 a, b, c = data_thresholding_numbers(Track_stats_df)
                 return c
-    
             
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1031,414 +819,414 @@ cmap_frames = plt.get_cmap('viridis')
 # Statistical testing?
 
 
-with ui.nav_panel("Visualisation"):
+# with ui.nav_panel("Visualisation"):
 
 
-    # ===========================================================================================================================================================================================================================================================================
-    # Tracks tab
+#     # ===========================================================================================================================================================================================================================================================================
+#     # Tracks tab
 
-    with ui.navset_card_pill():
-        with ui.nav_panel("Tracks"):
+#     with ui.navset_card_pill():
+#         with ui.nav_panel("Tracks"):
 
-            with ui.navset_card_tab(id="tab1"):
-                with ui.nav_panel("Track visualisation"):
-                    with ui.layout_columns(
-                        col_widths=(6,6,6,6),
-                        row_heights=(3, 4),	
-                    ):
+#             with ui.navset_card_tab(id="tab1"):
+#                 with ui.nav_panel("Track visualisation"):
+#                     with ui.layout_columns(
+#                         col_widths=(6,6,6,6),
+#                         row_heights=(3, 4),	
+#                     ):
         
-                        with ui.card(full_screen=True):
-                            ui.card_header("Raw tracks visualization")
-                            @render.plot
-                            def raw_tracks():
-                                return pu.visualize_full_tracks(
-                                    df=Spot_stats_df.get(), 
-                                    df2=Track_stats_df.get(), 
-                                    threshold=None, 
-                                    lw=0.5
-                                    )
+#                         with ui.card(full_screen=True):
+#                             ui.card_header("Raw tracks visualization")
+#                             @render.plot
+#                             def raw_tracks():
+#                                 return pu.visualize_full_tracks(
+#                                     df=Spot_stats_df.get(), 
+#                                     df2=Track_stats_df.get(), 
+#                                     threshold=None, 
+#                                     lw=0.5
+#                                     )
 
-                            @render.download(label="Download", filename="Raw tracks visualization.png")
-                            def download_raw_tracks():
-                                figure = pu.visualize_full_tracks(
-                                    df=Spot_stats_df.get(), 
-                                    df2=Track_stats_df.get(), 
-                                    threshold=None, 
-                                    lw=0.5
-                                    )
-                                with io.BytesIO() as buf:
-                                    figure.savefig(buf, format="png", dpi=300)
-                                    yield buf.getvalue()
+#                             @render.download(label="Download", filename="Raw tracks visualization.png")
+#                             def download_raw_tracks():
+#                                 figure = pu.visualize_full_tracks(
+#                                     df=Spot_stats_df.get(), 
+#                                     df2=Track_stats_df.get(), 
+#                                     threshold=None, 
+#                                     lw=0.5
+#                                     )
+#                                 with io.BytesIO() as buf:
+#                                     figure.savefig(buf, format="png", dpi=300)
+#                                     yield buf.getvalue()
 
-                        with ui.card(full_screen=True):
-                            ui.card_header("Smoothened tracks visualization")
-                            @render.plot
-                            def smoothened_tracks():
-                                return pu.visualize_smoothened_tracks(
-                                    df=Spot_stats_df.get(), 
-                                    df2=Track_stats_df.get(), 
-                                    threshold=None, 
-                                    smoothing_type='moving_average', 
-                                    smoothing_index=50, 
-                                    lw=0.8
-                                    )
+#                         with ui.card(full_screen=True):
+#                             ui.card_header("Smoothened tracks visualization")
+#                             @render.plot
+#                             def smoothened_tracks():
+#                                 return pu.visualize_smoothened_tracks(
+#                                     df=Spot_stats_df.get(), 
+#                                     df2=Track_stats_df.get(), 
+#                                     threshold=None, 
+#                                     smoothing_type='moving_average', 
+#                                     smoothing_index=50, 
+#                                     lw=0.8
+#                                     )
 
-                            @render.download(label="Download", filename="Smoothened tracks visualization.png")
-                            def download_smoothened_tracks():
-                                figure = pu.visualize_smoothened_tracks(
-                                    df=Spot_stats_df.get(), 
-                                    df2=Track_stats_df.get(), 
-                                    threshold=None, 
-                                    smoothing_type='moving_average', 
-                                    smoothing_index=50, 
-                                    lw=0.8
-                                    )
-                                with io.BytesIO() as buf:
-                                    figure.savefig(buf, format="png", dpi=300)
-                                    yield buf.getvalue()
+#                             @render.download(label="Download", filename="Smoothened tracks visualization.png")
+#                             def download_smoothened_tracks():
+#                                 figure = pu.visualize_smoothened_tracks(
+#                                     df=Spot_stats_df.get(), 
+#                                     df2=Track_stats_df.get(), 
+#                                     threshold=None, 
+#                                     smoothing_type='moving_average', 
+#                                     smoothing_index=50, 
+#                                     lw=0.8
+#                                     )
+#                                 with io.BytesIO() as buf:
+#                                     figure.savefig(buf, format="png", dpi=300)
+#                                     yield buf.getvalue()
 
-                with ui.nav_panel("Directionality plots"):
-                    with ui.layout_columns():
-                        with ui.card(full_screen=True):  
-                            ui.card_header("Directionality")
-                            with ui.layout_column_wrap(width=1 / 2):
-                                with ui.card(full_screen=False):
-                                    ui.card_header("Scaled by confinement ratio")
-                                    @render.plot
-                                    def migration_direction_tracks1():
-                                        figure = pu.migration_directions_with_kde_plus_mean(
-                                            df=Track_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD', 
-                                            subject='Cells', 
-                                            scaling_metric='CONFINEMENT_RATIO', 
-                                            cmap_normalization_metric=None, 
-                                            cmap=cmap_cells, 
-                                            threshold=None,
-                                            title_size2=title_size2
-                                            )
-                                        return figure
+#                 with ui.nav_panel("Directionality plots"):
+#                     with ui.layout_columns():
+#                         with ui.card(full_screen=True):  
+#                             ui.card_header("Directionality")
+#                             with ui.layout_column_wrap(width=1 / 2):
+#                                 with ui.card(full_screen=False):
+#                                     ui.card_header("Scaled by confinement ratio")
+#                                     @render.plot
+#                                     def migration_direction_tracks1():
+#                                         figure = pu.migration_directions_with_kde_plus_mean(
+#                                             df=Track_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD', 
+#                                             subject='Cells', 
+#                                             scaling_metric='CONFINEMENT_RATIO', 
+#                                             cmap_normalization_metric=None, 
+#                                             cmap=cmap_cells, 
+#                                             threshold=None,
+#                                             title_size2=title_size2
+#                                             )
+#                                         return figure
                                     
-                                    @render.download(label="Download", filename="Track directionality (scaled by confinement ratio).png")
-                                    def download_migration_direction_tracks1():
-                                        figure = pu.migration_directions_with_kde_plus_mean(
-                                            df=Track_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD', 
-                                            subject='Cells', 
-                                            scaling_metric='CONFINEMENT_RATIO', 
-                                            cmap_normalization_metric=None, 
-                                            cmap=cmap_cells, 
-                                            threshold=None,
-                                            title_size2=title_size
-                                            )
-                                        with io.BytesIO() as buf:
-                                            figure.savefig(buf, format="png", dpi=300)
-                                            yield buf.getvalue()
+#                                     @render.download(label="Download", filename="Track directionality (scaled by confinement ratio).png")
+#                                     def download_migration_direction_tracks1():
+#                                         figure = pu.migration_directions_with_kde_plus_mean(
+#                                             df=Track_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD', 
+#                                             subject='Cells', 
+#                                             scaling_metric='CONFINEMENT_RATIO', 
+#                                             cmap_normalization_metric=None, 
+#                                             cmap=cmap_cells, 
+#                                             threshold=None,
+#                                             title_size2=title_size
+#                                             )
+#                                         with io.BytesIO() as buf:
+#                                             figure.savefig(buf, format="png", dpi=300)
+#                                             yield buf.getvalue()
                                     
                                     
                                 
-                                with ui.card(full_screen=False):
-                                    ui.card_header("Scaled by net distance")
-                                    @render.plot
-                                    def migration_direction_tracks2():
-                                        figure = pu.migration_directions_with_kde_plus_mean(
-                                            df=Track_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD', 
-                                            subject='Cells', 
-                                            scaling_metric='NET_DISTANCE', 
-                                            cmap_normalization_metric=None, 
-                                            cmap=cmap_cells, 
-                                            threshold=None,
-                                            title_size2=title_size2
-                                            )
-                                        return figure
+#                                 with ui.card(full_screen=False):
+#                                     ui.card_header("Scaled by net distance")
+#                                     @render.plot
+#                                     def migration_direction_tracks2():
+#                                         figure = pu.migration_directions_with_kde_plus_mean(
+#                                             df=Track_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD', 
+#                                             subject='Cells', 
+#                                             scaling_metric='NET_DISTANCE', 
+#                                             cmap_normalization_metric=None, 
+#                                             cmap=cmap_cells, 
+#                                             threshold=None,
+#                                             title_size2=title_size2
+#                                             )
+#                                         return figure
 
-                                    @render.download(label="Download", filename="Track directionality (scaled by net distance).png")
-                                    def download_migration_direction_tracks2():
-                                        figure = pu.migration_directions_with_kde_plus_mean(
-                                            df=Track_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD', 
-                                            subject='Cells', 
-                                            scaling_metric='NET_DISTANCE', 
-                                            cmap_normalization_metric=None, 
-                                            cmap=cmap_cells, 
-                                            threshold=None,
-                                            title_size2=title_size
-                                            )
-                                        with io.BytesIO() as buf:
-                                            figure.savefig(buf, format="png", dpi=300)
-                                            yield buf.getvalue()
+#                                     @render.download(label="Download", filename="Track directionality (scaled by net distance).png")
+#                                     def download_migration_direction_tracks2():
+#                                         figure = pu.migration_directions_with_kde_plus_mean(
+#                                             df=Track_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD', 
+#                                             subject='Cells', 
+#                                             scaling_metric='NET_DISTANCE', 
+#                                             cmap_normalization_metric=None, 
+#                                             cmap=cmap_cells, 
+#                                             threshold=None,
+#                                             title_size2=title_size
+#                                             )
+#                                         with io.BytesIO() as buf:
+#                                             figure.savefig(buf, format="png", dpi=300)
+#                                             yield buf.getvalue()
                             
-                        with ui.card(full_screen=True):
-                            ui.card_header("Migration heatmaps")
-                            with ui.layout_column_wrap(width=1 / 2):
-                                with ui.card(full_screen=False):
-                                    ui.card_header("Standard")        
-                                    @render.plot
-                                    def tracks_migration_heatmap():
-                                        return pu.df_gaussian_donut(
-                                            df=Track_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD', 
-                                            subject='Cells', 
-                                            heatmap='inferno', 
-                                            weight=None, 
-                                            threshold=None,
-                                            title_size2=title_size2,
-                                            label_size=label_size,
-                                            figtext_color=figtext_color,
-                                            figtext_size=figtext_size
-                                            )
+#                         with ui.card(full_screen=True):
+#                             ui.card_header("Migration heatmaps")
+#                             with ui.layout_column_wrap(width=1 / 2):
+#                                 with ui.card(full_screen=False):
+#                                     ui.card_header("Standard")        
+#                                     @render.plot
+#                                     def tracks_migration_heatmap():
+#                                         return pu.df_gaussian_donut(
+#                                             df=Track_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD', 
+#                                             subject='Cells', 
+#                                             heatmap='inferno', 
+#                                             weight=None, 
+#                                             threshold=None,
+#                                             title_size2=title_size2,
+#                                             label_size=label_size,
+#                                             figtext_color=figtext_color,
+#                                             figtext_size=figtext_size
+#                                             )
                                     
-                                    @render.download(label="Download", filename="Cell migration heatmap.png")
-                                    def download_tracks_migration_heatmap():
-                                        figure = pu.df_gaussian_donut(
-                                            df=Track_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD', 
-                                            subject='Cells', 
-                                            heatmap='inferno', 
-                                            weight=None, 
-                                            threshold=None,
-                                            title_size2=title_size2,
-                                            label_size=label_size,
-                                            figtext_color=figtext_color,
-                                            figtext_size=figtext_size
-                                            )
-                                        with io.BytesIO() as buf:
-                                            figure.savefig(buf, format="png", dpi=300)
-                                            yield buf.getvalue()
+#                                     @render.download(label="Download", filename="Cell migration heatmap.png")
+#                                     def download_tracks_migration_heatmap():
+#                                         figure = pu.df_gaussian_donut(
+#                                             df=Track_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD', 
+#                                             subject='Cells', 
+#                                             heatmap='inferno', 
+#                                             weight=None, 
+#                                             threshold=None,
+#                                             title_size2=title_size2,
+#                                             label_size=label_size,
+#                                             figtext_color=figtext_color,
+#                                             figtext_size=figtext_size
+#                                             )
+#                                         with io.BytesIO() as buf:
+#                                             figure.savefig(buf, format="png", dpi=300)
+#                                             yield buf.getvalue()
 
-                                with ui.card(full_screen=False):
-                                    ui.card_header("Weighted")
-                                    with ui.value_box(
-                                    full_screen=False,
-                                    theme="text-red"
-                                    ):
-                                        ""
-                                        "Currently unavailable"
-                                        ""
+#                                 with ui.card(full_screen=False):
+#                                     ui.card_header("Weighted")
+#                                     with ui.value_box(
+#                                     full_screen=False,
+#                                     theme="text-red"
+#                                     ):
+#                                         ""
+#                                         "Currently unavailable"
+#                                         ""
 
-                with ui.nav_panel("Whole dataset histograms"):
+#                 with ui.nav_panel("Whole dataset histograms"):
                   
-                    with ui.layout_column_wrap(width=2 / 2):
-                        with ui.card(full_screen=False): 
-                            with ui.layout_columns(
-                                col_widths=(12,12)
-                            ): 
-                                with ui.card(full_screen=True):
-                                    ui.card_header("Net distances travelled")
-                                    @render.plot(
-                                            width=3600,
-                                            height=500
-                                            )
-                                    def cell_histogram_1():
-                                        figure = pu.histogram_cells_distance(
-                                            df=Track_stats_df.get(), 
-                                            metric='NET_DISTANCE', 
-                                            str='Net'
-                                            )
-                                        return figure
+#                     with ui.layout_column_wrap(width=2 / 2):
+#                         with ui.card(full_screen=False): 
+#                             with ui.layout_columns(
+#                                 col_widths=(12,12)
+#                             ): 
+#                                 with ui.card(full_screen=True):
+#                                     ui.card_header("Net distances travelled")
+#                                     @render.plot(
+#                                             width=3600,
+#                                             height=500
+#                                             )
+#                                     def cell_histogram_1():
+#                                         figure = pu.histogram_cells_distance(
+#                                             df=Track_stats_df.get(), 
+#                                             metric='NET_DISTANCE', 
+#                                             str='Net'
+#                                             )
+#                                         return figure
                                     
-                                    @render.download(label="Download", filename="Net distances travelled.png")
-                                    def download_cell_histogram_1():
-                                        figure = pu.histogram_cells_distance(
-                                            df=Track_stats_df.get(), 
-                                            metric='NET_DISTANCE', 
-                                            str='Net'
-                                            )
-                                        with io.BytesIO() as buf:
-                                            figure.savefig(buf, format="png", dpi=300)
-                                            yield buf.getvalue()
+#                                     @render.download(label="Download", filename="Net distances travelled.png")
+#                                     def download_cell_histogram_1():
+#                                         figure = pu.histogram_cells_distance(
+#                                             df=Track_stats_df.get(), 
+#                                             metric='NET_DISTANCE', 
+#                                             str='Net'
+#                                             )
+#                                         with io.BytesIO() as buf:
+#                                             figure.savefig(buf, format="png", dpi=300)
+#                                             yield buf.getvalue()
 
-                                with ui.card(full_screen=True):
-                                    ui.card_header("Track lengths")
-                                    @render.plot(
-                                            width=3800,
-                                            height=1000
-                                            )
-                                    def cell_histogram_2():
-                                        figure = pu.histogram_cells_distance(
-                                            df=Track_stats_df.get(), 
-                                            metric='TRACK_LENGTH', 
-                                            str='Total'
-                                            )
-                                        return figure
+#                                 with ui.card(full_screen=True):
+#                                     ui.card_header("Track lengths")
+#                                     @render.plot(
+#                                             width=3800,
+#                                             height=1000
+#                                             )
+#                                     def cell_histogram_2():
+#                                         figure = pu.histogram_cells_distance(
+#                                             df=Track_stats_df.get(), 
+#                                             metric='TRACK_LENGTH', 
+#                                             str='Total'
+#                                             )
+#                                         return figure
                                     
-                                    @render.download(label="Download", filename="Track lengths.png")
-                                    def download_cell_histogram_2():
-                                        figure = pu.histogram_cells_distance(
-                                            df=Track_stats_df.get(), 
-                                            metric='TRACK_LENGTH', 
-                                            str='Total'
-                                            )
-                                        with io.BytesIO() as buf:
-                                            figure.savefig(buf, format="png", dpi=300)
-                                            yield buf.getvalue()
+#                                     @render.download(label="Download", filename="Track lengths.png")
+#                                     def download_cell_histogram_2():
+#                                         figure = pu.histogram_cells_distance(
+#                                             df=Track_stats_df.get(), 
+#                                             metric='TRACK_LENGTH', 
+#                                             str='Total'
+#                                             )
+#                                         with io.BytesIO() as buf:
+#                                             figure.savefig(buf, format="png", dpi=300)
+#                                             yield buf.getvalue()
                                     
 
 
                 
-        with ui.nav_panel("Frames"):
+#         with ui.nav_panel("Frames"):
             
-            with ui.navset_card_tab(id="tab2"):
-                with ui.nav_panel("Histograms"):
-                    with ui.layout_columns(
-                        col_widths={"sm": (12,6,6)},
-                        row_heights=(3,4),
-                        # height="700px",
-                    ):
+#             with ui.navset_card_tab(id="tab2"):
+#                 with ui.nav_panel("Histograms"):
+#                     with ui.layout_columns(
+#                         col_widths={"sm": (12,6,6)},
+#                         row_heights=(3,4),
+#                         # height="700px",
+#                     ):
                         
-                        with ui.card(full_screen=True):
-                            ui.card_header("Speed histogram")
-                            @render.plot
-                            def migration_histogram():
-                                figure = pu.histogram_frame_speed(df=Frame_stats_df.get())
-                                return figure
+#                         with ui.card(full_screen=True):
+#                             ui.card_header("Speed histogram")
+#                             @render.plot
+#                             def migration_histogram():
+#                                 figure = pu.histogram_frame_speed(df=Frame_stats_df.get())
+#                                 return figure
 
-                            @render.download(label="Download", filename="Speed histogram.png")
-                            def download_migration_histogram():
-                                figure = pu.histogram_frame_speed(df=Frame_stats_df.get())
-                                with io.BytesIO() as buf:
-                                    figure.savefig(buf, format="png", dpi=300)
-                                    yield buf.getvalue()
+#                             @render.download(label="Download", filename="Speed histogram.png")
+#                             def download_migration_histogram():
+#                                 figure = pu.histogram_frame_speed(df=Frame_stats_df.get())
+#                                 with io.BytesIO() as buf:
+#                                     figure.savefig(buf, format="png", dpi=300)
+#                                     yield buf.getvalue()
 
-                with ui.nav_panel("Directionality plots"):
-                    with ui.layout_columns():
-                        with ui.card(full_screen=True):
-                            ui.card_header("Directionality")
-                            with ui.layout_column_wrap(width=1 / 2):
-                                with ui.card(full_screen=False):
-                                    ui.card_header("Standard - Scaled by mean distance")
-                                    @render.plot
-                                    def migration_direction_frames1():
-                                        return pu.migration_directions_with_kde_plus_mean(
-                                            df=Frame_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD', 
-                                            subject='Frames (weighted)', 
-                                            scaling_metric='MEAN_DISTANCE', 
-                                            cmap_normalization_metric='POSITION_T', 
-                                            cmap=cmap_frames, 
-                                            threshold=None,
-                                            title_size2=title_size2
-                                            )
+#                 with ui.nav_panel("Directionality plots"):
+#                     with ui.layout_columns():
+#                         with ui.card(full_screen=True):
+#                             ui.card_header("Directionality")
+#                             with ui.layout_column_wrap(width=1 / 2):
+#                                 with ui.card(full_screen=False):
+#                                     ui.card_header("Standard - Scaled by mean distance")
+#                                     @render.plot
+#                                     def migration_direction_frames1():
+#                                         return pu.migration_directions_with_kde_plus_mean(
+#                                             df=Frame_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD', 
+#                                             subject='Frames (weighted)', 
+#                                             scaling_metric='MEAN_DISTANCE', 
+#                                             cmap_normalization_metric='POSITION_T', 
+#                                             cmap=cmap_frames, 
+#                                             threshold=None,
+#                                             title_size2=title_size2
+#                                             )
                                     
-                                    @render.download(label="Download", filename="Frame directionality (standard - scaled by mean distance).png")
-                                    def download_migration_direction_frames1():
-                                        figure = pu.migration_directions_with_kde_plus_mean(
-                                            df=Frame_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD', 
-                                            subject='Frames (weighted)', 
-                                            scaling_metric='MEAN_DISTANCE', 
-                                            cmap_normalization_metric='POSITION_T', 
-                                            cmap=cmap_frames, 
-                                            threshold=None,
-                                            title_size2=title_size2
-                                            )
-                                        with io.BytesIO() as buf:
-                                            figure.savefig(buf, format="png", dpi=300)
-                                            yield buf.getvalue()
+#                                     @render.download(label="Download", filename="Frame directionality (standard - scaled by mean distance).png")
+#                                     def download_migration_direction_frames1():
+#                                         figure = pu.migration_directions_with_kde_plus_mean(
+#                                             df=Frame_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD', 
+#                                             subject='Frames (weighted)', 
+#                                             scaling_metric='MEAN_DISTANCE', 
+#                                             cmap_normalization_metric='POSITION_T', 
+#                                             cmap=cmap_frames, 
+#                                             threshold=None,
+#                                             title_size2=title_size2
+#                                             )
+#                                         with io.BytesIO() as buf:
+#                                             figure.savefig(buf, format="png", dpi=300)
+#                                             yield buf.getvalue()
 
-                                with ui.card(full_screen=False):
-                                    ui.card_header("Weighted - Scaled by mean distance")
-                                    @render.plot
-                                    def migration_direction_frames2():
-                                        return pu.migration_directions_with_kde_plus_mean(
-                                            df=Frame_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
-                                            subject='Frames (weighted)', 
-                                            scaling_metric='MEAN_DISTANCE', 
-                                            cmap_normalization_metric='POSITION_T', 
-                                            cmap=cmap_frames, 
-                                            threshold=None,
-                                            title_size2=title_size2
-                                            )
+#                                 with ui.card(full_screen=False):
+#                                     ui.card_header("Weighted - Scaled by mean distance")
+#                                     @render.plot
+#                                     def migration_direction_frames2():
+#                                         return pu.migration_directions_with_kde_plus_mean(
+#                                             df=Frame_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
+#                                             subject='Frames (weighted)', 
+#                                             scaling_metric='MEAN_DISTANCE', 
+#                                             cmap_normalization_metric='POSITION_T', 
+#                                             cmap=cmap_frames, 
+#                                             threshold=None,
+#                                             title_size2=title_size2
+#                                             )
                                     
-                                    @render.download(label="Download", filename="Frame directionality (weighted - scaled by mean distance).png")
-                                    def download_migration_direction_frames2():
-                                        figure = pu.migration_directions_with_kde_plus_mean(
-                                            df=Frame_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
-                                            subject='Frames (weighted)', 
-                                            scaling_metric='MEAN_DISTANCE', 
-                                            cmap_normalization_metric='POSITION_T', 
-                                            cmap=cmap_frames, 
-                                            threshold=None,
-                                            title_size2=title_size2
-                                            )
-                                        with io.BytesIO() as buf:
-                                            figure.savefig(buf, format="png", dpi=300)
-                                            yield buf.getvalue()
+#                                     @render.download(label="Download", filename="Frame directionality (weighted - scaled by mean distance).png")
+#                                     def download_migration_direction_frames2():
+#                                         figure = pu.migration_directions_with_kde_plus_mean(
+#                                             df=Frame_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
+#                                             subject='Frames (weighted)', 
+#                                             scaling_metric='MEAN_DISTANCE', 
+#                                             cmap_normalization_metric='POSITION_T', 
+#                                             cmap=cmap_frames, 
+#                                             threshold=None,
+#                                             title_size2=title_size2
+#                                             )
+#                                         with io.BytesIO() as buf:
+#                                             figure.savefig(buf, format="png", dpi=300)
+#                                             yield buf.getvalue()
                 
-                        with ui.card(full_screen=True):
-                            ui.card_header("Migration heatmaps")
-                            with ui.layout_column_wrap(width=1 / 2):
-                                with ui.card(full_screen=False):
-                                    ui.card_header("Standard")        
-                                    @render.plot
-                                    def frame_migration_heatmap_1():
-                                        return pu.df_gaussian_donut(
-                                            df=Frame_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD', 
-                                            subject='Frames', 
-                                            heatmap='viridis', 
-                                            weight=None, 
-                                            threshold=None,
-                                            title_size2=title_size2,
-                                            label_size=label_size,
-                                            figtext_color=figtext_color,
-                                            figtext_size=figtext_size
-                                            )
+#                         with ui.card(full_screen=True):
+#                             ui.card_header("Migration heatmaps")
+#                             with ui.layout_column_wrap(width=1 / 2):
+#                                 with ui.card(full_screen=False):
+#                                     ui.card_header("Standard")        
+#                                     @render.plot
+#                                     def frame_migration_heatmap_1():
+#                                         return pu.df_gaussian_donut(
+#                                             df=Frame_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD', 
+#                                             subject='Frames', 
+#                                             heatmap='viridis', 
+#                                             weight=None, 
+#                                             threshold=None,
+#                                             title_size2=title_size2,
+#                                             label_size=label_size,
+#                                             figtext_color=figtext_color,
+#                                             figtext_size=figtext_size
+#                                             )
                                     
-                                    @render.download(label="Download", filename="Frame migration heatmap (standard).png")
-                                    def download_frame_migration_heatmap_1():
-                                        figure = pu.df_gaussian_donut(
-                                            df=Frame_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD', 
-                                            subject='Frames', 
-                                            heatmap='viridis', 
-                                            weight=None, 
-                                            threshold=None,
-                                            title_size2=title_size2,
-                                            label_size=label_size,
-                                            figtext_color=figtext_color,
-                                            figtext_size=figtext_size
-                                            )
-                                        with io.BytesIO() as buf:
-                                            figure.savefig(buf, format="png", dpi=300)
-                                            yield buf.getvalue()
+#                                     @render.download(label="Download", filename="Frame migration heatmap (standard).png")
+#                                     def download_frame_migration_heatmap_1():
+#                                         figure = pu.df_gaussian_donut(
+#                                             df=Frame_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD', 
+#                                             subject='Frames', 
+#                                             heatmap='viridis', 
+#                                             weight=None, 
+#                                             threshold=None,
+#                                             title_size2=title_size2,
+#                                             label_size=label_size,
+#                                             figtext_color=figtext_color,
+#                                             figtext_size=figtext_size
+#                                             )
+#                                         with io.BytesIO() as buf:
+#                                             figure.savefig(buf, format="png", dpi=300)
+#                                             yield buf.getvalue()
 
-                                with ui.card(full_screen=False):
-                                    ui.card_header("Weighted")
-                                    @render.plot
-                                    def frame_migration_heatmap_2():
-                                        return pu.df_gaussian_donut(
-                                            df=Frame_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
-                                            subject='Frames', 
-                                            heatmap='viridis', 
-                                            weight='mean distance traveled', 
-                                            threshold=None,
-                                            title_size2=title_size2,
-                                            label_size=label_size,
-                                            figtext_color=figtext_color,
-                                            figtext_size=figtext_size
-                                            )
+#                                 with ui.card(full_screen=False):
+#                                     ui.card_header("Weighted")
+#                                     @render.plot
+#                                     def frame_migration_heatmap_2():
+#                                         return pu.df_gaussian_donut(
+#                                             df=Frame_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
+#                                             subject='Frames', 
+#                                             heatmap='viridis', 
+#                                             weight='mean distance traveled', 
+#                                             threshold=None,
+#                                             title_size2=title_size2,
+#                                             label_size=label_size,
+#                                             figtext_color=figtext_color,
+#                                             figtext_size=figtext_size
+#                                             )
                                     
-                                    @render.download(label="Download", filename="Frame migration heatmap (weighted).png")
-                                    def download_frame_migration_heatmap_2():
-                                        figure = pu.df_gaussian_donut(
-                                            df=Frame_stats_df.get(), 
-                                            metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
-                                            subject='Frames', 
-                                            heatmap='viridis', 
-                                            weight='mean distance traveled', 
-                                            threshold=None,
-                                            title_size2=title_size2,
-                                            label_size=label_size,
-                                            figtext_color=figtext_color,
-                                            figtext_size=figtext_size
-                                            )
-                                        with io.BytesIO() as buf:
-                                            figure.savefig(buf, format="png", dpi=300)
-                                            yield buf.getvalue()
+#                                     @render.download(label="Download", filename="Frame migration heatmap (weighted).png")
+#                                     def download_frame_migration_heatmap_2():
+#                                         figure = pu.df_gaussian_donut(
+#                                             df=Frame_stats_df.get(), 
+#                                             metric='MEAN_DIRECTION_RAD_weight_mean_dis', 
+#                                             subject='Frames', 
+#                                             heatmap='viridis', 
+#                                             weight='mean distance traveled', 
+#                                             threshold=None,
+#                                             title_size2=title_size2,
+#                                             label_size=label_size,
+#                                             figtext_color=figtext_color,
+#                                             figtext_size=figtext_size
+#                                             )
+#                                         with io.BytesIO() as buf:
+#                                             figure.savefig(buf, format="png", dpi=300)
+#                                             yield buf.getvalue()
 
 
 
@@ -1459,44 +1247,44 @@ addtnl_labels_global = reactive.value()
 
 with ui.nav_panel("Statistics"):
 
+    with ui.layout_column_wrap(height='100%'):
+        with ui.card(full_screen=False):
+            @render.plot
+            def swarmplot():
+                metric = input.testing_metric()
 
-    @reactive.effect()
-    def extract():
-        file: list[FileInfo] | None = input.file1()
-        if file is None:
-            return pd.DataFrame()
-        else:
-            Spot_subdataframes = []
-            Track_subdataframes = []
-            Frame_subdataframes = []
+                if metric in Track_metrics.get():
+                    df = Track_stats_df.get()
+                elif df.empty:
+                    return plt.figure()
+                else:
+                    return plt.figure()
+                return pu.swarm_plot(df, metric, dict_Metrics[metric])
             
-            Spot_stats = Spot_stats_df.get()
-            Track_stats = Track_stats_df.get()
-            Frame_stats = Frame_stats_df.get()
+            @render.download(label="Download", filename="Swarmplot.svg")
+            def download_swarmplot():
+                metric = input.testing_metric()
 
-            browser_count = count.get()
-            for i in range(1, browser_count + 1, 1):
-                condition = input[f"label{i}"]()
-                Spot_stats_subdfs = Spot_stats[Spot_stats['CONDITION'].str.startswith(condition)]
-                Track_stats_subdfs = Track_stats[Track_stats['CONDITION'].str.startswith(condition)]
-                Frame_stats_subdfs = Frame_stats[Frame_stats['CONDITION'].str.startswith(condition)]
-                Spot_subdataframes.append(Spot_stats_subdfs)
-                Track_subdataframes.append(Track_stats_subdfs)
-                Frame_subdataframes.append(Frame_stats_subdfs)
-
-            Spot_subdataframes_global.set(Spot_subdataframes)
-            Track_subdataframes_global.set(Track_subdataframes)
-            Frame_subdataframes_global.set(Frame_subdataframes)
+                if metric in Track_metrics.get():
+                    df = Track_stats_df.get()
+                elif df.empty:
+                    return plt.figure()
+                else:
+                    return plt.figure()
+            
+                figure = pu.swarm_plot(df, metric, dict_Metrics[metric])
+                with io.BytesIO() as buf:
+                    figure.savefig(buf, format="svg")
+                    yield buf.getvalue()
 
 
+    with ui.panel_well():
+        ui.input_select(  
+                "testing_metric",  
+                "Test for metric:",  
+                dict_Track_metrics 
+            )  
     
-    @render.data_frame
-    def render_extract():
-        compiled_subdataframes = Track_subdataframes_global.get()
-        return render.DataGrid(compiled_subdataframes[1])
-        # return render.DataGrid()
-
-
 
 
 
