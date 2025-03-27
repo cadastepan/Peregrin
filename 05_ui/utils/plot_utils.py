@@ -476,7 +476,7 @@ def histogram_cells_distance(df, metric, str):
     return plt.gcf()
 
 
-def swarm_plot(df, metric):
+def swarm_plot(df, metric, Metric):
     plt.figure(figsize=(10, 7.5))
     
     # Ensure CONDITION is treated as categorical
@@ -529,7 +529,7 @@ def swarm_plot(df, metric):
     '''
     
     plt.legend(loc='upper right')
-    plt.title(f"Swarm Plot with Mean and Median Lines for {metric}")
+    plt.title(f"Swarm Plot with Mean and Median Lines for {Metric}")
     plt.xlabel("Condition")
-    plt.ylabel(metric)
+    plt.ylabel(Metric)
     return plt.gcf()
