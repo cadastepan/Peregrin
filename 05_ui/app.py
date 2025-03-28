@@ -692,7 +692,7 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
                 pass
 
         @reactive.effect
-        @reactive.event(input.threshold1, input.threshold2)
+        @reactive.event(input.threshold1)
         def update_thresholded_dataA():
             return update_thresholded_data(input.metricA(), Track_stats_df_T, Spot_stats_df_T, raw_Track_stats_df, raw_Spot_stats_df, thresholded_dataA())
 
@@ -721,12 +721,12 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
             a, b, c = data_thresholding_numbers(Track_stats_df_T.get())
             return c
     
-    @ui.bind_task_button(button_id="threshold2")
+    @ui.bind_task_button(button_id="threshold1")
     @reactive.extended_task
     async def thresholding1():
         await asyncio.sleep(4.5)
         
-    ui.input_task_button("threshold2", "Apply")
+    ui.input_task_button("threshold1", "Apply")
     
 
             
@@ -827,12 +827,12 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
             return c
         
 
-    @ui.bind_task_button(button_id="threshold1")
+    @ui.bind_task_button(button_id="threshold2")
     @reactive.extended_task
     async def thresholding2():
         await asyncio.sleep(4.5)
         
-    ui.input_task_button("threshold1", "Apply")
+    ui.input_task_button("threshold2", "Apply")
 
 
             
