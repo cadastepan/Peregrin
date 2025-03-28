@@ -477,20 +477,20 @@ def histogram_cells_distance(df, metric, str):
 
 
 def swarm_plot(df, metric, Metric):
-    plt.figure(figsize=(10, 7.5))
+    plt.figure(figsize=(12.5, 9.5))
     
     # Ensure CONDITION is treated as categorical
     df['CONDITION'] = df['CONDITION'].astype(str)
 
-    swarm_size = 2.5
+    swarm_size = 3.15
     swarm_alpha = 0.5
 
     violin_fill_color = 'whitesmoke'
     violin_edge_color = 'lightgrey'
-    violin_alpha = 0.55
+    violin_alpha = 0.525
 
-    mean_span = 0.2
-    median_span = 0.185
+    mean_span = 0.275
+    median_span = 0.25
     line_width = 1.6
     
     sns.swarmplot(data=df, x='CONDITION', y=metric, hue='REPLICATE', palette='tab10', size=swarm_size, dodge=False, alpha=swarm_alpha, zorder=1, legend=False)
