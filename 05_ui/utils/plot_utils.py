@@ -322,14 +322,23 @@ def track_visuals(df2, c_mode, grid, title_size=12):
 
 def visualize_tracks(df, df2, condition='all', replicate='all', c_mode='color1', grid=True, smoothing_index=0, lw=1):  # smoothened tracks visualization
 
-    try:
-        condition = int(condition)
-    except ValueError or TypeError:
+    # try:
+    #     condition = int(condition)
+    #     replicate = int(replicate)
+    # except ValueError or TypeError:
+    #     pass
+
+    if condition == None or replicate == None:
         pass
-    try:
-        replicate = int(replicate)
-    except ValueError or TypeError:
-        pass
+    else:
+        try:
+            condition = int(condition)
+        except ValueError or TypeError:
+            pass
+        try:
+            replicate = int(replicate)
+        except ValueError or TypeError:
+            pass
 
     if condition == 'all':
         df = df.sort_values(by=['CONDITION', 'REPLICATE', 'TRACK_ID', 'POSITION_T'])

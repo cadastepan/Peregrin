@@ -692,7 +692,7 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
                 pass
 
         @reactive.effect
-        @reactive.event(input.threshold1)
+        # @reactive.event(input.threshold1, input.)
         def update_thresholded_dataA():
             return update_thresholded_data(input.metricA(), Track_stats_df_T, Spot_stats_df_T, raw_Track_stats_df, raw_Spot_stats_df, thresholded_dataA())
 
@@ -721,12 +721,12 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
             a, b, c = data_thresholding_numbers(Track_stats_df_T.get())
             return c
     
-    @ui.bind_task_button(button_id="threshold1")
-    @reactive.extended_task
-    async def thresholding1():
-        await asyncio.sleep(4.5)
+    # @ui.bind_task_button(button_id="threshold1")
+    # @reactive.extended_task
+    # async def thresholding1():
+    #     await asyncio.sleep(4.5)
         
-    ui.input_task_button("threshold1", "Apply")
+    # ui.input_task_button("threshold1", "Apply")
     
 
             
@@ -797,7 +797,7 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
                 pass
             
         @reactive.effect
-        @reactive.event(input.threshold1, input.threshold2)
+        # @reactive.event(input.threshold1, input.threshold2)
         def update_thresholded_dataB():
             return update_thresholded_data(input.metricB(), Track_stats_df, Spot_stats_df, Track_stats_df_T, Spot_stats_df_T, thresholded_dataB())
 
@@ -827,12 +827,12 @@ with ui.sidebar(open="open", position="right", bg="f8f8f8"):
             return c
         
 
-    @ui.bind_task_button(button_id="threshold2")
-    @reactive.extended_task
-    async def thresholding2():
-        await asyncio.sleep(4.5)
+    # @ui.bind_task_button(button_id="threshold2")
+    # @reactive.extended_task
+    # async def thresholding2():
+    #     await asyncio.sleep(4.5)
         
-    ui.input_task_button("threshold2", "Apply")
+    # ui.input_task_button("threshold2", "Apply")
 
 
             
@@ -926,6 +926,20 @@ with ui.nav_panel("Visualisation"):
                         grid=input.grid(),
                         smoothing_index=smoothing_index.get(), 
                         )
+                @render.download(label="Download", filename="Tracks visualisation.svg")
+                def download_tracks_plot():
+                    figure = pu.visualize_tracks(
+                        df=Spot_stats_df.get(),
+                        df2=Track_stats_df.get(),
+                        condition=input.condition(), 
+                        replicate=input.replicate(), 
+                        c_mode=input.color_mode(), 
+                        grid=input.grid(),
+                        smoothing_index=smoothing_index.get(), 
+                        )
+                    with io.BytesIO() as buf:
+                        figure.savefig(buf, format="svg")
+                        yield buf.getvalue()
                 
             
             with ui.panel_well():
