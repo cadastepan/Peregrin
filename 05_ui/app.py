@@ -891,191 +891,337 @@ cmap_frames = plt.get_cmap('viridis')
 # Plots
 # Statistical testing?
 
+color_modes = {
+    'greyscale': 'B&W',
+    'color1': 'jet',
+    'color3': 'brg',
+    'color4': 'hot',
+    'color5': 'viridis',
+    'color6': 'rainbow',
+    'color7': 'turbo',
+    'color8': 'nipy-spectral',
+    'color9': 'gist-ncar'
+    }
 
-# with ui.nav_panel("Visualisation"):
+smoothing_index = reactive.value(0)
 
 
-#     # ===========================================================================================================================================================================================================================================================================
-#     # Tracks tab
+with ui.nav_panel("Visualisation"):
 
-#     with ui.navset_card_pill():
-#         with ui.nav_panel("Tracks"):
+    # ===========================================================================================================================================================================================================================================================================
+    # Tracks tab
 
-#             with ui.navset_card_tab(id="tab1"):
-#                 with ui.nav_panel("Track visualisation"):
-#                     with ui.layout_columns(
-#                         col_widths=(6,6,6,6),
-#                         row_heights=(3, 4),	
-#                     ):
+    with ui.navset_pill_list():
+        with ui.nav_panel("Tracks"):
+            with ui.card():
+                ui.card_header("Tracks visualisation")
+                @render.plot
+                def tracks_plot():
+                    return pu.visualize_tracks(
+                        df=Spot_stats_df.get(),
+                        df2=Track_stats_df.get(),
+                        condition=input.condition(), 
+                        replicate=input.replicate(), 
+                        c_mode=input.color_mode(), 
+                        grid=input.grid(),
+                        smoothing_index=smoothing_index.get(), 
+                        )
+                
+            
+            with ui.panel_well():
+
+                ui.input_select(
+                    "condition",
+                    "Condition:",
+                    []
+                    )
+                
+                ui.input_select(
+                    "replicate",
+                    "Replicate:",
+                    []
+                    )
+
+                @reactive.effect
+                def select_cond():
+                    dictionary = du.get_cond_repl(Track_stats_df.get())	
+
+                    # Can use [] to remove all choices
+                    if Track_stats_df.get().empty:
+                        conditions = []
+
+                    conditions = list(dictionary.keys())
+
+                    ui.update_select(
+                        id='condition',
+                        choices=conditions
+                    )
+
+                @reactive.effect
+                def select_repl():
+                    condition = input.condition()
+                    dictionary = du.get_cond_repl(Track_stats_df.get())
+
+                    if Track_stats_df.get().empty:
+                        replicates = []
+
+                    if condition in dictionary:
+                        replicates = dictionary[condition]
+                    else:
+                        replicates = []
+
+                    ui.update_select(
+                        id='replicate',
+                        choices=replicates
+                        )
+                
+                ui.input_numeric(
+                    "smoothing", 
+                    "Smoothing:", 
+                    0, 
+                    min=1, 
+                    max=100)
+                
+                @reactive.effect
+                async def update_smoothing():
+                    value = input.smoothing()
+                    await asyncio.sleep(2.5)
+                    return smoothing_index.set(value)
+
+
+                ui.input_select(
+                    "color_mode",
+                    "Color mode:",
+                    color_modes,
+                    selected='color1'
+                    )
+
+                ui.input_checkbox(
+                    "grid", 
+                    "grid", 
+                    True
+                    ) 
+                
+                
+
+                # ui.input_slider(
+                #     id="smoothing",
+                #     label="Smoothing index:",
+                #     min=0,
+                #     max=100,
+                #     value=50
+                # )
+                # ui.input_select(
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            #     with ui.nav_panel("Track visualisation"):
+            #         with ui.layout_columns(
+            #             col_widths=(6,6,6,6),
+            #             row_heights=(3, 4),	
+            #         ):
         
-#                         with ui.card(full_screen=True):
-#                             ui.card_header("Raw tracks visualization")
-#                             @render.plot
-#                             def raw_tracks():
-#                                 return pu.visualize_full_tracks(
-#                                     df=Spot_stats_df.get(), 
-#                                     df2=Track_stats_df.get(), 
-#                                     threshold=None, 
-#                                     lw=0.5
-#                                     )
+            #             with ui.card(full_screen=True):
+            #                 ui.card_header("Raw tracks visualization")
+            #                 @render.plot
+            #                 def raw_tracks():
+            #                     return pu.visualize_full_tracks(
+            #                         df=Spot_stats_df.get(), 
+            #                         df2=Track_stats_df.get(), 
+            #                         threshold=None, 
+            #                         lw=0.5
+            #                         )
 
-#                             @render.download(label="Download", filename="Raw tracks visualization.png")
-#                             def download_raw_tracks():
-#                                 figure = pu.visualize_full_tracks(
-#                                     df=Spot_stats_df.get(), 
-#                                     df2=Track_stats_df.get(), 
-#                                     threshold=None, 
-#                                     lw=0.5
-#                                     )
-#                                 with io.BytesIO() as buf:
-#                                     figure.savefig(buf, format="png", dpi=300)
-#                                     yield buf.getvalue()
+            #                 @render.download(label="Download", filename="Raw tracks visualization.png")
+            #                 def download_raw_tracks():
+            #                     figure = pu.visualize_full_tracks(
+            #                         df=Spot_stats_df.get(), 
+            #                         df2=Track_stats_df.get(), 
+            #                         threshold=None, 
+            #                         lw=0.5
+            #                         )
+            #                     with io.BytesIO() as buf:
+            #                         figure.savefig(buf, format="png", dpi=300)
+            #                         yield buf.getvalue()
 
-#                         with ui.card(full_screen=True):
-#                             ui.card_header("Smoothened tracks visualization")
-#                             @render.plot
-#                             def smoothened_tracks():
-#                                 return pu.visualize_smoothened_tracks(
-#                                     df=Spot_stats_df.get(), 
-#                                     df2=Track_stats_df.get(), 
-#                                     threshold=None, 
-#                                     smoothing_type='moving_average', 
-#                                     smoothing_index=50, 
-#                                     lw=0.8
-#                                     )
+            #             with ui.card(full_screen=True):
+            #                 ui.card_header("Smoothened tracks visualization")
+            #                 @render.plot
+            #                 def smoothened_tracks():
+            #                     return pu.visualize_smoothened_tracks(
+            #                         df=Spot_stats_df.get(), 
+            #                         df2=Track_stats_df.get(), 
+            #                         threshold=None, 
+            #                         smoothing_type='moving_average', 
+            #                         smoothing_index=50, 
+            #                         lw=0.8
+            #                         )
 
-#                             @render.download(label="Download", filename="Smoothened tracks visualization.png")
-#                             def download_smoothened_tracks():
-#                                 figure = pu.visualize_smoothened_tracks(
-#                                     df=Spot_stats_df.get(), 
-#                                     df2=Track_stats_df.get(), 
-#                                     threshold=None, 
-#                                     smoothing_type='moving_average', 
-#                                     smoothing_index=50, 
-#                                     lw=0.8
-#                                     )
-#                                 with io.BytesIO() as buf:
-#                                     figure.savefig(buf, format="png", dpi=300)
-#                                     yield buf.getvalue()
+            #                 @render.download(label="Download", filename="Smoothened tracks visualization.png")
+            #                 def download_smoothened_tracks():
+            #                     figure = pu.visualize_smoothened_tracks(
+            #                         df=Spot_stats_df.get(), 
+            #                         df2=Track_stats_df.get(), 
+            #                         threshold=None, 
+            #                         smoothing_type='moving_average', 
+            #                         smoothing_index=50, 
+            #                         lw=0.8
+            #                         )
+            #                     with io.BytesIO() as buf:
+            #                         figure.savefig(buf, format="png", dpi=300)
+            #                         yield buf.getvalue()
 
-#                 with ui.nav_panel("Directionality plots"):
-#                     with ui.layout_columns():
-#                         with ui.card(full_screen=True):  
-#                             ui.card_header("Directionality")
-#                             with ui.layout_column_wrap(width=1 / 2):
-#                                 with ui.card(full_screen=False):
-#                                     ui.card_header("Scaled by confinement ratio")
-#                                     @render.plot
-#                                     def migration_direction_tracks1():
-#                                         figure = pu.migration_directions_with_kde_plus_mean(
-#                                             df=Track_stats_df.get(), 
-#                                             metric='MEAN_DIRECTION_RAD', 
-#                                             subject='Cells', 
-#                                             scaling_metric='CONFINEMENT_RATIO', 
-#                                             cmap_normalization_metric=None, 
-#                                             cmap=cmap_cells, 
-#                                             threshold=None,
-#                                             title_size2=title_size2
-#                                             )
-#                                         return figure
+            #     with ui.nav_panel("Directionality plots"):
+            #         with ui.layout_columns():
+            #             with ui.card(full_screen=True):  
+            #                 ui.card_header("Directionality")
+            #                 with ui.layout_column_wrap(width=1 / 2):
+            #                     with ui.card(full_screen=False):
+            #                         ui.card_header("Scaled by confinement ratio")
+            #                         @render.plot
+            #                         def migration_direction_tracks1():
+            #                             figure = pu.migration_directions_with_kde_plus_mean(
+            #                                 df=Track_stats_df.get(), 
+            #                                 metric='MEAN_DIRECTION_RAD', 
+            #                                 subject='Cells', 
+            #                                 scaling_metric='CONFINEMENT_RATIO', 
+            #                                 cmap_normalization_metric=None, 
+            #                                 cmap=cmap_cells, 
+            #                                 threshold=None,
+            #                                 title_size2=title_size2
+            #                                 )
+            #                             return figure
                                     
-#                                     @render.download(label="Download", filename="Track directionality (scaled by confinement ratio).png")
-#                                     def download_migration_direction_tracks1():
-#                                         figure = pu.migration_directions_with_kde_plus_mean(
-#                                             df=Track_stats_df.get(), 
-#                                             metric='MEAN_DIRECTION_RAD', 
-#                                             subject='Cells', 
-#                                             scaling_metric='CONFINEMENT_RATIO', 
-#                                             cmap_normalization_metric=None, 
-#                                             cmap=cmap_cells, 
-#                                             threshold=None,
-#                                             title_size2=title_size
-#                                             )
-#                                         with io.BytesIO() as buf:
-#                                             figure.savefig(buf, format="png", dpi=300)
-#                                             yield buf.getvalue()
+            #                         @render.download(label="Download", filename="Track directionality (scaled by confinement ratio).png")
+            #                         def download_migration_direction_tracks1():
+            #                             figure = pu.migration_directions_with_kde_plus_mean(
+            #                                 df=Track_stats_df.get(), 
+            #                                 metric='MEAN_DIRECTION_RAD', 
+            #                                 subject='Cells', 
+            #                                 scaling_metric='CONFINEMENT_RATIO', 
+            #                                 cmap_normalization_metric=None, 
+            #                                 cmap=cmap_cells, 
+            #                                 threshold=None,
+            #                                 title_size2=title_size
+            #                                 )
+            #                             with io.BytesIO() as buf:
+            #                                 figure.savefig(buf, format="png", dpi=300)
+            #                                 yield buf.getvalue()
                                     
                                     
                                 
-#                                 with ui.card(full_screen=False):
-#                                     ui.card_header("Scaled by net distance")
-#                                     @render.plot
-#                                     def migration_direction_tracks2():
-#                                         figure = pu.migration_directions_with_kde_plus_mean(
-#                                             df=Track_stats_df.get(), 
-#                                             metric='MEAN_DIRECTION_RAD', 
-#                                             subject='Cells', 
-#                                             scaling_metric='NET_DISTANCE', 
-#                                             cmap_normalization_metric=None, 
-#                                             cmap=cmap_cells, 
-#                                             threshold=None,
-#                                             title_size2=title_size2
-#                                             )
-#                                         return figure
+            #                     with ui.card(full_screen=False):
+            #                         ui.card_header("Scaled by net distance")
+            #                         @render.plot
+            #                         def migration_direction_tracks2():
+            #                             figure = pu.migration_directions_with_kde_plus_mean(
+            #                                 df=Track_stats_df.get(), 
+            #                                 metric='MEAN_DIRECTION_RAD', 
+            #                                 subject='Cells', 
+            #                                 scaling_metric='NET_DISTANCE', 
+            #                                 cmap_normalization_metric=None, 
+            #                                 cmap=cmap_cells, 
+            #                                 threshold=None,
+            #                                 title_size2=title_size2
+            #                                 )
+            #                             return figure
 
-#                                     @render.download(label="Download", filename="Track directionality (scaled by net distance).png")
-#                                     def download_migration_direction_tracks2():
-#                                         figure = pu.migration_directions_with_kde_plus_mean(
-#                                             df=Track_stats_df.get(), 
-#                                             metric='MEAN_DIRECTION_RAD', 
-#                                             subject='Cells', 
-#                                             scaling_metric='NET_DISTANCE', 
-#                                             cmap_normalization_metric=None, 
-#                                             cmap=cmap_cells, 
-#                                             threshold=None,
-#                                             title_size2=title_size
-#                                             )
-#                                         with io.BytesIO() as buf:
-#                                             figure.savefig(buf, format="png", dpi=300)
-#                                             yield buf.getvalue()
+            #                         @render.download(label="Download", filename="Track directionality (scaled by net distance).png")
+            #                         def download_migration_direction_tracks2():
+            #                             figure = pu.migration_directions_with_kde_plus_mean(
+            #                                 df=Track_stats_df.get(), 
+            #                                 metric='MEAN_DIRECTION_RAD', 
+            #                                 subject='Cells', 
+            #                                 scaling_metric='NET_DISTANCE', 
+            #                                 cmap_normalization_metric=None, 
+            #                                 cmap=cmap_cells, 
+            #                                 threshold=None,
+            #                                 title_size2=title_size
+            #                                 )
+            #                             with io.BytesIO() as buf:
+            #                                 figure.savefig(buf, format="png", dpi=300)
+            #                                 yield buf.getvalue()
                             
-#                         with ui.card(full_screen=True):
-#                             ui.card_header("Migration heatmaps")
-#                             with ui.layout_column_wrap(width=1 / 2):
-#                                 with ui.card(full_screen=False):
-#                                     ui.card_header("Standard")        
-#                                     @render.plot
-#                                     def tracks_migration_heatmap():
-#                                         return pu.df_gaussian_donut(
-#                                             df=Track_stats_df.get(), 
-#                                             metric='MEAN_DIRECTION_RAD', 
-#                                             subject='Cells', 
-#                                             heatmap='inferno', 
-#                                             weight=None, 
-#                                             threshold=None,
-#                                             title_size2=title_size2,
-#                                             label_size=label_size,
-#                                             figtext_color=figtext_color,
-#                                             figtext_size=figtext_size
-#                                             )
+            #             with ui.card(full_screen=True):
+            #                 ui.card_header("Migration heatmaps")
+            #                 with ui.layout_column_wrap(width=1 / 2):
+            #                     with ui.card(full_screen=False):
+            #                         ui.card_header("Standard")        
+            #                         @render.plot
+            #                         def tracks_migration_heatmap():
+            #                             return pu.df_gaussian_donut(
+            #                                 df=Track_stats_df.get(), 
+            #                                 metric='MEAN_DIRECTION_RAD', 
+            #                                 subject='Cells', 
+            #                                 heatmap='inferno', 
+            #                                 weight=None, 
+            #                                 threshold=None,
+            #                                 title_size2=title_size2,
+            #                                 label_size=label_size,
+            #                                 figtext_color=figtext_color,
+            #                                 figtext_size=figtext_size
+            #                                 )
                                     
-#                                     @render.download(label="Download", filename="Cell migration heatmap.png")
-#                                     def download_tracks_migration_heatmap():
-#                                         figure = pu.df_gaussian_donut(
-#                                             df=Track_stats_df.get(), 
-#                                             metric='MEAN_DIRECTION_RAD', 
-#                                             subject='Cells', 
-#                                             heatmap='inferno', 
-#                                             weight=None, 
-#                                             threshold=None,
-#                                             title_size2=title_size2,
-#                                             label_size=label_size,
-#                                             figtext_color=figtext_color,
-#                                             figtext_size=figtext_size
-#                                             )
-#                                         with io.BytesIO() as buf:
-#                                             figure.savefig(buf, format="png", dpi=300)
-#                                             yield buf.getvalue()
+            #                         @render.download(label="Download", filename="Cell migration heatmap.png")
+            #                         def download_tracks_migration_heatmap():
+            #                             figure = pu.df_gaussian_donut(
+            #                                 df=Track_stats_df.get(), 
+            #                                 metric='MEAN_DIRECTION_RAD', 
+            #                                 subject='Cells', 
+            #                                 heatmap='inferno', 
+            #                                 weight=None, 
+            #                                 threshold=None,
+            #                                 title_size2=title_size2,
+            #                                 label_size=label_size,
+            #                                 figtext_color=figtext_color,
+            #                                 figtext_size=figtext_size
+            #                                 )
+            #                             with io.BytesIO() as buf:
+            #                                 figure.savefig(buf, format="png", dpi=300)
+            #                                 yield buf.getvalue()
 
-#                                 with ui.card(full_screen=False):
-#                                     ui.card_header("Weighted")
-#                                     with ui.value_box(
-#                                     full_screen=False,
-#                                     theme="text-red"
-#                                     ):
-#                                         ""
-#                                         "Currently unavailable"
-#                                         ""
+            #                     with ui.card(full_screen=False):
+            #                         ui.card_header("Weighted")
+            #                         with ui.value_box(
+            #                         full_screen=False,
+            #                         theme="text-red"
+            #                         ):
+            #                             ""
+            #                             "Currently unavailable"
+            #                             ""
 
 #                 with ui.nav_panel("Whole dataset histograms"):
                   
