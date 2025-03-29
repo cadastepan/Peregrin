@@ -296,3 +296,20 @@ def calculate_speed(df, variable):
         merged = merge_dfs(merging, on=['CONDITION', variable])
 
     return pd.DataFrame(merged)
+
+def get_cond_repl(df):
+    # Get unique conditions from the DataFrame
+    dictionary = {'all': ['all']}
+    
+
+    conditions = df['CONDITION'].unique()
+    for condition in conditions:
+        # Get unique replicates for each condition
+        replicates_list = ['all']
+        replicates = df[df['CONDITION'] == condition]['REPLICATE'].unique()
+        for replicate in replicates.tolist():
+            replicate = str(replicate)
+            replicates_list.append(replicate)
+            
+        dictionary.update({str(condition): replicates_list})
+    return dictionary	
