@@ -218,18 +218,18 @@ def df_gaussian_donut(df, metric, subject, heatmap, weight, threshold, title_siz
     # try to normalize the heatmap colors to the absolute 0 (not min of the kde values) and to the max of the kde values
 
 
-def track_visuals(df2, c_mode, grid, title_size=12):
+def track_visuals(df2, c_mode, grid, lut_metric, title_size=12):
     
     fig, ax = plt.subplots(figsize=(13, 10))
 
-    unique_tracks = df2[['CONDITION', 'REPLICATE', 'TRACK_ID', 'NET_DISTANCE']].drop_duplicates()
+    unique_tracks = df2[['CONDITION', 'REPLICATE', 'TRACK_ID', lut_metric]].drop_duplicates()
 
-    net_distances = df2[['TRACK_ID', 'NET_DISTANCE']].drop_duplicates()
+    lut_norm_df = df2[['TRACK_ID', lut_metric]].drop_duplicates()
 
     # Normalize the NET_DISTANCE to a 0-1 range
-    dmin = net_distances['NET_DISTANCE'].min()
-    dmax = net_distances['NET_DISTANCE'].max()
-    norm = plt.Normalize(vmin=dmin, vmax=dmax)
+    lut_min = lut_norm_df[lut_metric].min()
+    lut_max = lut_norm_df[lut_metric].max()
+    norm = plt.Normalize(vmin=lut_min, vmax=lut_max)
     if c_mode == 'greyscale':
         colormap = plt.cm.gist_yarg
         grid_color = 'gainsboro'
@@ -270,19 +270,19 @@ def track_visuals(df2, c_mode, grid, title_size=12):
     track_colors = {}
 
     for track_ids_all in unique_tracks['TRACK_ID'].drop_duplicates():
-        ratio = net_distances[net_distances['TRACK_ID'] == track_ids_all]['NET_DISTANCE'].values[0]
+        ratio = lut_norm_df[lut_norm_df['TRACK_ID'] == track_ids_all][lut_metric].values[0]
         track_colors[f'all all {track_ids_all}'] = colormap(norm(ratio))
 
     for condition in unique_tracks['CONDITION'].drop_duplicates():
         condition_tracks = unique_tracks[unique_tracks['CONDITION'] == condition]
         for track_ids_conditions in condition_tracks['TRACK_ID'].drop_duplicates():
-            ratio = net_distances[net_distances['TRACK_ID'] == track_ids_conditions]['NET_DISTANCE'].values[0]
+            ratio = lut_norm_df[lut_norm_df['TRACK_ID'] == track_ids_conditions][lut_metric].values[0]
             track_colors[f'{condition} all {track_ids_conditions}'] = colormap(norm(ratio))
         
         for replicate in condition_tracks['REPLICATE'].drop_duplicates():
             replicate_tracks = condition_tracks[condition_tracks['REPLICATE'] == replicate]
             for track_id_replicates in replicate_tracks['TRACK_ID'].drop_duplicates():
-                ratio = net_distances[net_distances['TRACK_ID'] == track_id_replicates]['NET_DISTANCE'].values[0]
+                ratio = lut_norm_df[lut_norm_df['TRACK_ID'] == track_id_replicates][lut_metric].values[0]
                 track_colors[f'{condition} {replicate} {track_id_replicates}'] = colormap(norm(ratio))
 
     # Set up the plot limits
@@ -318,9 +318,7 @@ def track_visuals(df2, c_mode, grid, title_size=12):
 
     return fig, ax, unique_tracks, track_colors, norm, colormap
 
-
-
-def visualize_tracks(df, df2, condition='all', replicate='all', c_mode='color1', grid=True, smoothing_index=0, lw=1):  # smoothened tracks visualization
+def visualize_tracks(df, df2, condition='all', replicate='all', c_mode='color1', grid=True, smoothing_index=0, lut_metric='NET_DISTANCE', lw=1, arrowsize=6):  # smoothened tracks visualization
 
     # try:
     #     condition = int(condition)
@@ -349,7 +347,7 @@ def visualize_tracks(df, df2, condition='all', replicate='all', c_mode='color1',
 
 
     # Using the  track_visuals function
-    fig_visuals, ax_visuals, unique_tracks, track_colors_visuals, norm_visuals, colormap_visuals = track_visuals(df2, c_mode, grid)
+    fig_visuals, ax_visuals, unique_tracks, track_colors_visuals, norm_visuals, colormap_visuals = track_visuals(df2, c_mode, grid, lut_metric)
 
     # Plot the full tracks
     for condition in df['CONDITION'].drop_duplicates():
@@ -391,7 +389,7 @@ def visualize_tracks(df, df2, condition='all', replicate='all', c_mode='color1',
                         posB=(x_smoothed.iloc[-2] + dx, y_smoothed.iloc[-2] + dy),  # End position based on direction
                         arrowstyle='-|>',  # Style of the arrow (you can adjust the style as needed)
                         color=arrow_color,  # Set the color of the arrow
-                        mutation_scale=5,  # Scale the size of the arrow head (adjust this based on the plot scale)
+                        mutation_scale=arrowsize,  # Scale the size of the arrow head (adjust this based on the plot scale)
                         linewidth=1.2,  # Line width for the arrow
                         zorder=30  # Ensure the arrow is drawn on top of the line
                     )
@@ -400,6 +398,50 @@ def visualize_tracks(df, df2, condition='all', replicate='all', c_mode='color1',
                     plt.gca().add_patch(arrow)
 
     return plt.gcf()
+
+def tracks_lut_map(df2, c_mode='color1', lut_metric='NET_DISTANCE', metrics_dict=None):
+
+    lut_norm_df = df2[['TRACK_ID', lut_metric]].drop_duplicates()
+
+    # Normalize the NET_DISTANCE to a 0-1 range
+    lut_min = lut_norm_df[lut_metric].min()
+    lut_max = lut_norm_df[lut_metric].max()
+    norm = plt.Normalize(vmin=lut_min, vmax=lut_max)
+
+
+    if c_mode == 'greyscale':
+        colormap = plt.cm.gist_yarg
+    else:
+        if c_mode == 'color1':
+            colormap = plt.cm.jet
+        elif c_mode == 'color2':
+            colormap = plt.cm.brg
+        elif c_mode == 'color3':
+            colormap = plt.cm.hot
+        elif c_mode == 'color4':
+            colormap = plt.cm.gnuplot
+        elif c_mode == 'color5':
+            colormap = plt.cm.viridis
+        elif c_mode == 'color6':
+            colormap = plt.cm.rainbow
+        elif c_mode == 'color7':
+            colormap = plt.cm.turbo
+        elif c_mode == 'color8':
+            colormap = plt.cm.nipy_spectral
+        elif c_mode == 'color9':
+            colormap = plt.cm.gist_ncar
+    
+    # Add a colorbar to show the LUT map
+    sm = plt.cm.ScalarMappable(norm=norm, cmap=colormap)
+    sm.set_array([])
+    # Create a separate figure for the LUT map (colorbar)
+    fig_lut, ax_lut = plt.subplots(figsize=(2, 6))
+    ax_lut.axis('off')
+    cbar = fig_lut.colorbar(sm, ax=ax_lut, orientation='vertical', extend='both')
+    cbar.set_label(metrics_dict[lut_metric], fontsize=10)
+
+    return plt.gcf()
+
 
 
 def histogram_cells_distance(df, metric, str):

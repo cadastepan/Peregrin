@@ -904,6 +904,9 @@ color_modes = {
     }
 
 smoothing_index = reactive.value(0)
+arrow_size = reactive.value(6)
+line_width = reactive.value(1)
+
 
 
 with ui.nav_panel("Visualisation"):
@@ -924,9 +927,12 @@ with ui.nav_panel("Visualisation"):
                         replicate=input.replicate(), 
                         c_mode=input.color_mode(), 
                         grid=input.grid(),
-                        smoothing_index=smoothing_index.get(), 
+                        smoothing_index=smoothing_index.get(),
+                        lut_metric=input.lut_scaling(),
+                        lw=line_width.get(),
+                        arrowsize=arrow_size.get()
                         )
-                @render.download(label="Download", filename="Tracks visualisation.svg")
+                @render.download(label="Download track visualization", filename="Track visualization.svg")
                 def download_tracks_plot():
                     figure = pu.visualize_tracks(
                         df=Spot_stats_df.get(),
@@ -936,9 +942,23 @@ with ui.nav_panel("Visualisation"):
                         c_mode=input.color_mode(), 
                         grid=input.grid(),
                         smoothing_index=smoothing_index.get(), 
+                        lut_metric=input.lut_scaling(),
+                        lw=line_width.get(),
+                        arrowsize=arrow_size.get()
                         )
                     with io.BytesIO() as buf:
                         figure.savefig(buf, format="svg")
+                        yield buf.getvalue()
+                @render.download(label="Download LUT map", filename="Track visualization LUT map.svg")
+                def download_tracks_lut_map():
+                    figure = pu.tracks_lut_map(
+                        df2=Track_stats_df.get(), 
+                        c_mode=input.color_mode(), 
+                        lut_metric=input.lut_scaling(), 
+                        metrics_dict=dict_Track_metrics
+                        )
+                    with io.BytesIO() as buf:
+                        figure.savefig(buf, format="svg", bbox_inches='tight')
                         yield buf.getvalue()
                 
             
@@ -988,6 +1008,19 @@ with ui.nav_panel("Visualisation"):
                         id='replicate',
                         choices=replicates
                         )
+                    
+                ui.input_select(
+                    'lut_scaling',
+                    'LUT scaling metric:',
+                    dict_Track_metrics
+                )
+
+                ui.input_select(
+                    "color_mode",
+                    "Color mode:",
+                    color_modes,
+                    selected='color1'
+                    )
                 
                 ui.input_numeric(
                     "smoothing", 
@@ -1001,14 +1034,30 @@ with ui.nav_panel("Visualisation"):
                     value = input.smoothing()
                     await asyncio.sleep(2.5)
                     return smoothing_index.set(value)
-
-
-                ui.input_select(
-                    "color_mode",
-                    "Color mode:",
-                    color_modes,
-                    selected='color1'
+                
+                ui.input_numeric(
+                    'line_width',
+                    'Line width:',
+                    1
                     )
+                
+                @reactive.effect
+                async def update_line_width():
+                    value = input.line_width()
+                    await asyncio.sleep(2.5)
+                    return line_width.set(value)
+
+                ui.input_numeric(
+                    'arrow_size',
+                    'Arrow size:',
+                    6
+                    )
+                
+                @reactive.effect
+                async def update_arrow_size():
+                    value = input.arrow_size()
+                    await asyncio.sleep(2.5)
+                    return arrow_size.set(value)
 
                 ui.input_checkbox(
                     "grid", 
