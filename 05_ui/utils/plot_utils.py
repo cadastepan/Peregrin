@@ -3,9 +3,13 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.colors import Normalize
 from matplotlib.patches import FancyArrowPatch
+import matplotlib.lines as mlines
 from scipy.stats import gaussian_kde
 from scipy.signal import savgol_filter
+from scipy.stats import mannwhitneyu
 from peregrin.scripts import PlotParams
+import seaborn as sns
+from itertools import combinations
 
 
 def histogram_frame_speed(df):
@@ -216,41 +220,87 @@ def df_gaussian_donut(df, metric, subject, heatmap, weight, threshold, title_siz
     # try to normalize the heatmap colors to the absolute 0 (not min of the kde values) and to the max of the kde values
 
 
-def track_visuals(df, df2, title_size=12):
-    # fig and ax definition
+def track_visuals(df2, c_mode, grid, lut_metric, title_size=12):
+    
     fig, ax = plt.subplots(figsize=(13, 10))
 
-    # Ensuring that dataframse have required data
-    track_ids = df2['TRACK_ID'].unique()
+    unique_tracks = df2[['CONDITION', 'REPLICATE', 'TRACK_ID', lut_metric]].drop_duplicates()
 
-    # Filter df2 to only include rows where TRACK_ID is in df's track_ids
-    df_filtered = df[df['TRACK_ID'].isin(track_ids)]
-
-    net_distances = df2[['TRACK_ID', 'NET_DISTANCE']]
+    lut_norm_df = df2[['TRACK_ID', lut_metric]].drop_duplicates()
 
     # Normalize the NET_DISTANCE to a 0-1 range
-    dmin = net_distances['NET_DISTANCE'].min()
-    dmax = net_distances['NET_DISTANCE'].max()
-    norm = plt.Normalize(vmin=dmin, vmax=dmax)
-    colormap = plt.cm.jet
+    lut_min = lut_norm_df[lut_metric].min()
+    lut_max = lut_norm_df[lut_metric].max()
+    norm = plt.Normalize(vmin=lut_min, vmax=lut_max)
+    if c_mode == 'greyscale':
+        colormap = plt.cm.gist_yarg
+        grid_color = 'gainsboro'
+        face_color = 'None'
+        grid_alpha = 0.5
+        if grid:
+            grid_lines = '-.'
+        else:
+            grid_lines = 'None'
+    else:
+        if c_mode == 'color1':
+            colormap = plt.cm.jet
+        elif c_mode == 'color2':
+            colormap = plt.cm.brg
+        elif c_mode == 'color3':
+            colormap = plt.cm.hot
+        elif c_mode == 'color4':
+            colormap = plt.cm.gnuplot
+        elif c_mode == 'color5':
+            colormap = plt.cm.viridis
+        elif c_mode == 'color6':
+            colormap = plt.cm.rainbow
+        elif c_mode == 'color7':
+            colormap = plt.cm.turbo
+        elif c_mode == 'color8':
+            colormap = plt.cm.nipy_spectral
+        elif c_mode == 'color9':
+            colormap = plt.cm.gist_ncar
+        grid_color = 'silver'
+        face_color = 'darkgrey'
+        grid_alpha = 0.75
+        if grid:
+            grid_lines = '-.'
+        else:
+            grid_lines = 'None'
 
     # Create a dictionary to store the color for each track based on its confinement ratio
     track_colors = {}
-    for track_id in track_ids:
-        ratio = net_distances[net_distances['TRACK_ID'] == track_id]['NET_DISTANCE'].values[0]
-        track_colors[track_id] = colormap(norm(ratio))
+
+    for track_ids_all in unique_tracks['TRACK_ID'].drop_duplicates():
+        ratio = lut_norm_df[lut_norm_df['TRACK_ID'] == track_ids_all][lut_metric].values[0]
+        track_colors[f'all all {track_ids_all}'] = colormap(norm(ratio))
+
+    for condition in unique_tracks['CONDITION'].drop_duplicates():
+        condition_tracks = unique_tracks[unique_tracks['CONDITION'] == condition]
+        for track_ids_conditions in condition_tracks['TRACK_ID'].drop_duplicates():
+            ratio = lut_norm_df[lut_norm_df['TRACK_ID'] == track_ids_conditions][lut_metric].values[0]
+            track_colors[f'{condition} all {track_ids_conditions}'] = colormap(norm(ratio))
+        
+        for replicate in condition_tracks['REPLICATE'].drop_duplicates():
+            replicate_tracks = condition_tracks[condition_tracks['REPLICATE'] == replicate]
+            for track_id_replicates in replicate_tracks['TRACK_ID'].drop_duplicates():
+                ratio = lut_norm_df[lut_norm_df['TRACK_ID'] == track_id_replicates][lut_metric].values[0]
+                track_colors[f'{condition} {replicate} {track_id_replicates}'] = colormap(norm(ratio))
 
     # Set up the plot limits
-    x_min, x_max = 0.0, 1180.3634496205236
-    y_min, y_max = 0.0, 885.0880400844326
+    # Define the desired dimensions in microns
+    microns_per_pixel = 0.7381885238402274 # for 10x lens
+    x_min, x_max = 0, (1600 * microns_per_pixel)
+    y_min, y_max = 0, (1200 * microns_per_pixel)
+
     ax.set_aspect('1', adjustable='box')
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
     ax.set_xlabel('Position X [microns]')
     ax.set_ylabel('Position Y [microns]')
     ax.set_title('Track Visualization', fontsize=title_size)
-    ax.set_facecolor('darkgrey')
-    ax.grid(True, which='both', axis='both', color='silver', linewidth=1)
+    ax.set_facecolor(face_color)
+    ax.grid(True, which='both', axis='both', color=grid_color, linestyle=grid_lines, linewidth=1, alpha=grid_alpha)
 
     # Manually set the major tick locations and labels
     x_ticks_major = np.arange(x_min, x_max, 200)  # Adjust the step size as needed
@@ -266,127 +316,134 @@ def track_visuals(df, df2, title_size=12):
     y_ticks_minor = np.arange(y_min, y_max, 50)  # Minor ticks every 50 microns
     ax.set_xticks(x_ticks_minor, minor=True)
     ax.set_yticks(y_ticks_minor, minor=True)
-
-    # Access and modify tick labels
-    # for label in plt.gca().get_xticklabels() + plt.gca().get_yticklabels():
-    #      label.set_fontproperties(roboto_ticks)
     ax.tick_params(axis='both', which='major', labelsize=8)
 
-    return fig, ax, track_ids, track_colors, norm, colormap
+    return fig, ax, unique_tracks, track_colors, norm, colormap
 
-def visualize_full_tracks(df, df2, threshold, lw=1):  #Trakcs visualisation
+def visualize_tracks(df, df2, condition='all', replicate='all', c_mode='color1', grid=True, smoothing_index=0, lut_metric='NET_DISTANCE', lw=1, arrowsize=6):  # smoothened tracks visualization
 
-    # Recognizing the presence of a threshold
-    if threshold == None:
-        threshold = '_no_threshold'
+    # try:
+    #     condition = int(condition)
+    #     replicate = int(replicate)
+    # except ValueError or TypeError:
+    #     pass
+
+    if condition == None or replicate == None:
+        pass
     else:
-        threshold = '_' + threshold
+        try:
+            condition = int(condition)
+        except ValueError or TypeError:
+            pass
+        try:
+            replicate = int(replicate)
+        except ValueError or TypeError:
+            pass
+
+    if condition == 'all':
+        df = df.sort_values(by=['CONDITION', 'REPLICATE', 'TRACK_ID', 'POSITION_T'])
+    elif condition != 'all' and replicate == 'all':
+        df = df[df['CONDITION'] == condition].sort_values(by=['CONDITION', 'REPLICATE', 'TRACK_ID', 'POSITION_T'])
+    elif condition != 'all' and replicate != 'all':
+        df = df[(df['CONDITION'] == condition) & (df['REPLICATE'] == replicate)].sort_values(by=['CONDITION', 'REPLICATE', 'TRACK_ID', 'POSITION_T'])
+
 
     # Using the  track_visuals function
-    fig_visuals, ax_visuals, track_ids_visuals, track_colors_visuals, norm_visuals, colormap_visuals = track_visuals(df, df2)
+    fig_visuals, ax_visuals, unique_tracks, track_colors_visuals, norm_visuals, colormap_visuals = track_visuals(df2, c_mode, grid, lut_metric)
 
     # Plot the full tracks
-    for track_id in track_ids_visuals:
-        track_data = df[df['TRACK_ID'] == track_id]
-        x = track_data['POSITION_X']
-        y = track_data['POSITION_Y']
-        ax_visuals.plot(x, y, lw=lw, color=track_colors_visuals[track_id], label=f'Track {track_id}')
-        
-        # Get the original color from track_colors_visuals[track_id]
-        original_color = mcolors.to_rgb(track_colors_visuals[track_id])
-        # Darken the color by reducing the brightness (by scaling each RGB channel)
-        darkened_color = np.array(original_color) * 0.7  # Adjust 0.7 to a value between 0 and 1 for different darkness levels
-        # Ensure that no channel goes below 0 (clip values if necessary)
-        darkened_color = np.clip(darkened_color, 0, 1)
-        # Apply the darkened color with a slight increase in the green and blue channels for the original factor you had (optional)
-        color = darkened_color * np.array([1.0, 1.0, 0.8])  # If you want to keep the original adjustment
-    
+    for condition in df['CONDITION'].drop_duplicates():
+        condition_tracks = df[df['CONDITION'] == condition]
+        for replicate in condition_tracks['REPLICATE'].drop_duplicates():
+            replicate_tracks = condition_tracks[condition_tracks['REPLICATE'] == replicate]
+            for track_id in replicate_tracks['TRACK_ID'].drop_duplicates():
+                track_data = replicate_tracks[replicate_tracks['TRACK_ID'] == track_id]
+                x = track_data['POSITION_X']
+                y = track_data['POSITION_Y']
 
-        if len(x) > 1:
-            # Add arrow to indicate direction
-            dx = x.diff().iloc[-1]
-            dy = y.diff().iloc[-1]
-            if dx != 0 or dy != 0:
-                # Create an arrow instead of a circle
-                arrow = FancyArrowPatch(
-                    posA=(x.iloc[-2], y.iloc[-2]),  # Start position (second-to-last point)
-                    posB=(x.iloc[-1], y.iloc[-1]),  # End position (last point)
-                    arrowstyle='-|>',  # Style of the arrow (you can adjust the style as needed)
-                    color=color,  # Set the color of the arrow
-                    mutation_scale=5,  # Scale the size of the arrow head (adjust this based on the plot scale)
-                    linewidth=1.2,  # Line width for the arrow
-                    zorder=10  # Ensure the arrow is drawn on top of the line
-                )
+                # Apply smoothing to the track (if applicable)
+                if smoothing_index == None:
+                    x_smoothed = x
+                    y_smoothed = y
+                elif smoothing_index > 0:
+                    x_smoothed = x.rolling(window=smoothing_index, min_periods=1).mean()
+                    y_smoothed = y.rolling(window=smoothing_index, min_periods=1).mean()
+                else:
+                    x_smoothed = x
+                    y_smoothed = y
 
-                # Add the arrow to your plot (if you're using a `matplotlib` figure/axes)
-                plt.gca().add_patch(arrow)
+                ax_visuals.plot(x_smoothed, y_smoothed, lw=lw, color=track_colors_visuals[f'{condition} {replicate} {track_id}'], label=f'Track {track_id}')
+                
+                # Get the original color from track_colors_visuals[track_id]
+                arrow_color = mcolors.to_rgb(track_colors_visuals[f'{condition} {replicate} {track_id}'])
 
-    # plt.savefig(f'01a_Full_tracks_snapshot{threshold}.png', dpi=300)
-    # plt.figure()
+                if len(x_smoothed) > 1:
+                    # Extract the mean direction from df2 for the current track
+                    mean_direction_rad = df2[df2[['CONDITION', 'REPLICATE', 'TRACK_ID']] == [condition, replicate, track_id]]['MEAN_DIRECTION_RAD'].values[0]
+                    
+                    # Use trigonometry to calculate the direction (dx, dy) from the angle
+                    dx = np.cos(mean_direction_rad)  # Change in x based on angle
+                    dy = np.sin(mean_direction_rad)  # Change in y based on angle
+                    
+                    # Create an arrow to indicate direction
+                    arrow = FancyArrowPatch(
+                        posA=(x_smoothed.iloc[-2], y_smoothed.iloc[-2]),  # Start position (second-to-last point)
+                        posB=(x_smoothed.iloc[-2] + dx, y_smoothed.iloc[-2] + dy),  # End position based on direction
+                        arrowstyle='-|>',  # Style of the arrow (you can adjust the style as needed)
+                        color=arrow_color,  # Set the color of the arrow
+                        mutation_scale=arrowsize,  # Scale the size of the arrow head (adjust this based on the plot scale)
+                        linewidth=1.2,  # Line width for the arrow
+                        zorder=30  # Ensure the arrow is drawn on top of the line
+                    )
+
+                    # Add the arrow to your plot (if you're using a `matplotlib` figure/axes)
+                    plt.gca().add_patch(arrow)
+
     return plt.gcf()
 
-def visualize_smoothened_tracks(df, df2, threshold, smoothing_type=None, smoothing_index=10, lw=1):  # smoothened tracks visualization
+def tracks_lut_map(df2, c_mode='color1', lut_metric='NET_DISTANCE', metrics_dict=None):
 
-    # Recognizing the presence of a threshold
-    if threshold is None:
-        threshold = '_no_threshold'
+    lut_norm_df = df2[['TRACK_ID', lut_metric]].drop_duplicates()
+
+    # Normalize the NET_DISTANCE to a 0-1 range
+    lut_min = lut_norm_df[lut_metric].min()
+    lut_max = lut_norm_df[lut_metric].max()
+    norm = plt.Normalize(vmin=lut_min, vmax=lut_max)
+
+
+    if c_mode == 'greyscale':
+        colormap = plt.cm.gist_yarg
     else:
-        threshold = '_' + threshold
+        if c_mode == 'color1':
+            colormap = plt.cm.jet
+        elif c_mode == 'color2':
+            colormap = plt.cm.brg
+        elif c_mode == 'color3':
+            colormap = plt.cm.hot
+        elif c_mode == 'color4':
+            colormap = plt.cm.gnuplot
+        elif c_mode == 'color5':
+            colormap = plt.cm.viridis
+        elif c_mode == 'color6':
+            colormap = plt.cm.rainbow
+        elif c_mode == 'color7':
+            colormap = plt.cm.turbo
+        elif c_mode == 'color8':
+            colormap = plt.cm.nipy_spectral
+        elif c_mode == 'color9':
+            colormap = plt.cm.gist_ncar
+    
+    # Add a colorbar to show the LUT map
+    sm = plt.cm.ScalarMappable(norm=norm, cmap=colormap)
+    sm.set_array([])
+    # Create a separate figure for the LUT map (colorbar)
+    fig_lut, ax_lut = plt.subplots(figsize=(2, 6))
+    ax_lut.axis('off')
+    cbar = fig_lut.colorbar(sm, ax=ax_lut, orientation='vertical', extend='both')
+    cbar.set_label(metrics_dict[lut_metric], fontsize=10)
 
-    # Using the track_visuals function
-    fig_visuals, ax_visuals, track_ids_visuals, track_colors_visuals, norm_visuals, colormap_visuals = track_visuals(df, df2)
-
-    # Plot the full tracks
-    for track_id in track_ids_visuals:
-        track_data = df[df['TRACK_ID'] == track_id]
-        x = track_data['POSITION_X']
-        y = track_data['POSITION_Y']
-        
-        # Apply smoothing to the track (if applicable)
-        if smoothing_type == 'moving_average':
-            x_smoothed = x.rolling(window=smoothing_index, min_periods=1).mean()
-            y_smoothed = y.rolling(window=smoothing_index, min_periods=1).mean()
-        else:
-            x_smoothed = x
-            y_smoothed = y
-
-        ax_visuals.plot(x_smoothed, y_smoothed, lw=lw, color=track_colors_visuals[track_id], label=f'Track {track_id}')
-
-        # Get the original color from track_colors_visuals[track_id]
-        original_color = mcolors.to_rgb(track_colors_visuals[track_id])
-        # Darken the color by reducing the brightness (by scaling each RGB channel)
-        darkened_color = np.array(original_color) * 0.7  # Adjust 0.7 to a value between 0 and 1 for different darkness levels
-        # Ensure that no channel goes below 0 (clip values if necessary)
-        darkened_color = np.clip(darkened_color, 0, 1)
-        # Apply the darkened color with a slight increase in the green and blue channels for the original factor you had (optional)
-        color = darkened_color * np.array([1.0, 1.0, 0.8])  # If you want to keep the original adjustment
-
-
-        if len(x_smoothed) > 1:
-            # Extract the mean direction from df2 for the current track
-            mean_direction_rad = df2[df2['TRACK_ID'] == track_id]['MEAN_DIRECTION_RAD'].values[0]
-            
-            # Use trigonometry to calculate the direction (dx, dy) from the angle
-            dx = np.cos(mean_direction_rad)  # Change in x based on angle
-            dy = np.sin(mean_direction_rad)  # Change in y based on angle
-            
-            # Create an arrow to indicate direction
-            arrow = FancyArrowPatch(
-                posA=(x_smoothed.iloc[-2], y_smoothed.iloc[-2]),  # Start position (second-to-last point)
-                posB=(x_smoothed.iloc[-2] + dx, y_smoothed.iloc[-2] + dy),  # End position based on direction
-                arrowstyle='-|>',  # Style of the arrow (you can adjust the style as needed)
-                color=color,  # Set the color of the arrow
-                mutation_scale=5,  # Scale the size of the arrow head (adjust this based on the plot scale)
-                linewidth=1.2,  # Line width for the arrow
-                zorder=30  # Ensure the arrow is drawn on top of the line
-            )
-
-            # Add the arrow to your plot (if you're using a `matplotlib` figure/axes)
-            plt.gca().add_patch(arrow)
-
-    # plt.savefig(f'01a_Full_tracks_snapshot{threshold}.png', dpi=300)
-    # plt.show()
     return plt.gcf()
+
 
 
 def histogram_cells_distance(df, metric, str):
@@ -472,3 +529,177 @@ def histogram_cells_distance(df, metric, str):
     # plt.show()
 
     return plt.gcf()
+
+
+# def swarm_plot(df, metric, Metric):
+#     plt.figure(figsize=(12.5, 9.5))
+    
+#     # Ensure CONDITION is treated as categorical
+#     df['CONDITION'] = df['CONDITION'].astype(str)
+
+#     swarm_size = 3.15
+#     swarm_alpha = 0.5
+
+#     violin_fill_color = 'whitesmoke'
+#     violin_edge_color = 'lightgrey'
+#     violin_alpha = 0.525
+
+#     mean_span = 0.275
+#     median_span = 0.25
+#     line_width = 1.6
+    
+#     sns.swarmplot(data=df, x='CONDITION', y=metric, hue='REPLICATE', palette='tab10', size=swarm_size, dodge=False, alpha=swarm_alpha, zorder=1, legend=False)
+#     sns.despine()
+
+#     replicate_means = df.groupby(['CONDITION', 'REPLICATE'])[metric].mean().reset_index()
+#     sns.scatterplot(data=replicate_means, x='CONDITION', y=metric, hue='REPLICATE', palette='tab10', edgecolor='black', s=150, zorder=3, legend=False)
+    
+#     sns.violinplot(data=df, x='CONDITION', y=metric, color=violin_fill_color, edgecolor=violin_edge_color, inner=None, alpha=violin_alpha, zorder=0)
+
+#     # Calculate mean and median for each condition
+#     condition_stats = df.groupby('CONDITION')[metric].agg(['mean', 'median']).reset_index()
+
+#     # Plot mean and median lines for each condition using seaborn functions
+#     for i, row in condition_stats.iterrows():
+#         x_center = i # Adjust x-coordinate to start at the correct condition position
+#         sns.lineplot(x=[x_center - mean_span, x_center + mean_span], y=[row['mean'], row['mean']], color='black', linestyle='-', linewidth=line_width, zorder=4, label='Mean' if i == 0 else "")
+#         sns.lineplot(x=[x_center - median_span, x_center + median_span], y=[row['median'], row['median']], color='black', linestyle='--', linewidth=line_width, zorder=4, label='Median' if i == 0 else "")
+
+#     ''' P-test
+#     # Perform pairwise p-tests
+#     conditions = df['CONDITION'].unique()
+#     pairs = list(combinations(conditions, 2))
+#     y_max = df[metric].max()
+#     y_offset = (y_max * 0.1)  # Offset for p-value annotations
+#     for i, (cond1, cond2) in enumerate(pairs):
+#         data1 = df[df['CONDITION'] == cond1][metric]
+#         data2 = df[df['CONDITION'] == cond2][metric]
+#         stat, p_value = mannwhitneyu(data1, data2)
+        
+#         # Annotate the plot with the p-value
+#         x1, x2 = conditions.tolist().index(cond1), conditions.tolist().index(cond2)
+#         y = y_max + y_offset * (i + 1)
+#         plt.plot([x1, x1, x2, x2], [y+4.5, y + y_offset / 2.5, y + y_offset / 2.5, y+1.5], lw=1, color='black')
+#         plt.text((x1 + x2) / 2, y + y_offset / 2, f'p = {round(p_value, 3):.3f}', ha='center', va='bottom', fontsize=10, color='black')
+#     '''
+    
+#     plt.legend(loc='upper right')
+#     plt.title(f"Swarm Plot with Mean and Median Lines for {Metric}")
+#     plt.xlabel("Condition")
+#     plt.ylabel(Metric)
+#     return plt.gcf()
+
+
+def swarm_plot(df, metric, Metric, show_violin=True, show_swarm=True, show_mean=True, show_median=True, show_error_bars=True, show_legend=True, p_testing=False):
+    # fig, ax = plt.subplots(figsize=(12.5, 9.5))
+    
+    # Set the figure size
+    plt.figure(figsize=(12.5, 9.5))
+    
+    # Ensure CONDITION is treated as categorical
+    df['CONDITION'] = df['CONDITION'].astype(str)
+
+    swarm_size = 3.15
+    swarm_alpha = 0.5
+
+    violin_fill_color = 'whitesmoke'
+    violin_edge_color = 'lightgrey'
+    violin_alpha = 0.525
+
+    mean_span = 0.275
+    median_span = 0.25
+    line_width = 1.6
+
+    sns.despine()
+
+    if show_swarm:
+        sns.swarmplot(data=df, x='CONDITION', y=metric, hue='REPLICATE', palette='tab10', size=swarm_size, dodge=False, alpha=swarm_alpha, zorder=1, legend=False)
+    else:
+        pass
+
+    replicate_means = df.groupby(['CONDITION', 'REPLICATE'])[metric].mean().reset_index()
+    sns.scatterplot(data=replicate_means, x='CONDITION', y=metric, hue='REPLICATE', palette='tab10', edgecolor='black', s=175, zorder=3, legend=False)
+
+    if show_violin:
+        sns.violinplot(data=df, x='CONDITION', y=metric, color=violin_fill_color, edgecolor=violin_edge_color, inner=None, alpha=violin_alpha, zorder=0)
+    else:
+        pass
+
+    # Calculate mean and median for each condition
+    condition_stats = df.groupby('CONDITION')[metric].agg(['mean', 'median']).reset_index()
+
+    # Plot mean and median lines for each condition using seaborn functions
+    for i, row in condition_stats.iterrows():
+        x_center = i # Adjust x-coordinate to start at the correct condition position
+        if show_mean:
+            sns.lineplot(x=[x_center - mean_span, x_center + mean_span], y=[row['mean'], row['mean']], color='black', linestyle='-', linewidth=line_width, zorder=4, label='Mean' if i == 0 else "")
+        else:
+            pass
+        if show_median:
+            sns.lineplot(x=[x_center - median_span, x_center + median_span], y=[row['median'], row['median']], color='black', linestyle='--', linewidth=line_width, zorder=4, label='Median' if i == 0 else "")
+        else:
+            pass
+
+    # Calculate mean, median, and standard deviation for each condition
+    condition_stats = df.groupby('CONDITION')[metric].agg(['mean', 'median', 'std']).reset_index()
+
+    if show_error_bars:
+        # Plot error bars representing mean ± standard deviation for each condition
+        for i, row in condition_stats.iterrows():
+            x_center = i
+            plt.errorbar(x_center, row['mean'], yerr=row['std'], fmt='None', color='black', alpha=0.8,
+                        linewidth=1, capsize=11, zorder=5, label='Mean ± SD' if i == 0 else "")
+    else:
+        pass
+    
+    if p_testing:
+        # P-test
+        # Perform pairwise p-tests
+        conditions = df['CONDITION'].unique()
+        pairs = list(combinations(conditions, 2))
+        y_max = df[metric].max()
+        y_offset = (y_max * 0.1)  # Offset for p-value annotations
+        for i, (cond1, cond2) in enumerate(pairs):
+            data1 = df[df['CONDITION'] == cond1][metric]
+            data2 = df[df['CONDITION'] == cond2][metric]
+            stat, p_value = mannwhitneyu(data1, data2)
+            
+            # Annotate the plot with the p-value
+            x1, x2 = conditions.tolist().index(cond1), conditions.tolist().index(cond2)
+            y = y_max + y_offset * (i + 1)
+            plt.plot([x1, x1, x2, x2], [y+4.5, y + y_offset / 2.5, y + y_offset / 2.5, y+1.5], lw=1, color='black')
+            plt.text((x1 + x2) / 2, y + y_offset / 2, f'p = {round(p_value, 3):.3f}', ha='center', va='bottom', fontsize=10, color='black')
+        else:
+            pass
+        
+
+    plt.title(f"Swarm Plot with Mean and Median Lines for {Metric}")
+    plt.xlabel("Condition")
+    plt.ylabel(Metric)
+    # plt.legend(title='Legend', title_fontsize='12', fontsize='10', loc='upper right', bbox_to_anchor=(1.15, 1), frameon=True)
+    # sns.replot
+
+    # Create a custom legend entry for the replicates marker.
+    # Here, we choose the first color of the palette ('tab10') as representative.
+    replicate_handle = mlines.Line2D([], [], marker='o', color='w',
+                                     markerfacecolor=sns.color_palette('tab10')[0],
+                                     markeredgecolor='black', markersize=10,
+                                     label='Replicates')
+
+    # Get current handles and labels (from Mean, Median, and Error Bars)
+    handles, labels = plt.gca().get_legend_handles_labels()
+    # Append the custom replicates handle
+    handles.insert(0, replicate_handle)
+    labels.insert(0, 'Replicates')
+    
+    plt.legend(handles=handles, labels=labels,
+               title='Legend', title_fontsize='12', fontsize='10',
+               loc='upper right', bbox_to_anchor=(1.15, 1), frameon=True)
+    
+    if show_legend:
+        pass
+    else:
+        plt.legend().remove()
+
+    return plt.gcf()
+
