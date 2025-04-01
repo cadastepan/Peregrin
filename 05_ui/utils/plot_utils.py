@@ -590,7 +590,7 @@ def histogram_cells_distance(df, metric, str):
 #     return plt.gcf()
 
 
-def swarm_plot(df, metric, Metric, show_violin=True, show_swarm=True, show_mean=True, show_median=True, show_error_bars=True, p_testing=False):
+def swarm_plot(df, metric, Metric, show_violin=True, show_swarm=True, show_mean=True, show_median=True, show_error_bars=True, show_legend=True, p_testing=False):
     # fig, ax = plt.subplots(figsize=(12.5, 9.5))
     
     # Set the figure size
@@ -695,6 +695,11 @@ def swarm_plot(df, metric, Metric, show_violin=True, show_swarm=True, show_mean=
     plt.legend(handles=handles, labels=labels,
                title='Legend', title_fontsize='12', fontsize='10',
                loc='upper right', bbox_to_anchor=(1.15, 1), frameon=True)
+    
+    if show_legend:
+        pass
+    else:
+        plt.legend().remove()
 
     return plt.gcf()
 

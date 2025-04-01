@@ -1541,7 +1541,7 @@ with ui.nav_panel("Statistics"):
                     return plt.figure()
                 # else:
                 #     return plt.figure()
-                return pu.swarm_plot(df, metric, dict_Metrics[metric], show_violin=input.violins(), show_swarm=input.swarm(), show_mean=input.mean(), show_median=input.median(), show_error_bars=input.errorbars(), p_testing=input.p_test())
+                return pu.swarm_plot(df, metric, dict_Metrics[metric], show_violin=input.violins(), show_swarm=input.swarm(), show_mean=input.mean(), show_median=input.median(), show_error_bars=input.errorbars(), show_legend=input.legend(), p_testing=input.p_test())
             
             @render.download(label="Download figure", filename="Swarmplot.svg")
             def download_swarmplot():
@@ -1554,7 +1554,7 @@ with ui.nav_panel("Statistics"):
                 # else:
                 #     return plt.figure()
             
-                figure = pu.swarm_plot(df, metric, dict_Metrics[metric], show_violin=input.violins(), show_swarm=input.swarm(), show_mean=input.mean(), show_median=input.median(), show_error_bars=input.errorbars(), p_testing=input.p_test())
+                figure = pu.swarm_plot(df, metric, dict_Metrics[metric], show_violin=input.violins(), show_swarm=input.swarm(), show_mean=input.mean(), show_median=input.median(), show_error_bars=input.errorbars(), show_legend=input.legend(), p_testing=input.p_test())
                 with io.BytesIO() as buf:
                     figure.savefig(buf, format="svg")
                     yield buf.getvalue()
@@ -1599,7 +1599,11 @@ with ui.nav_panel("Statistics"):
                 True
             )
         
-        ui.input_
+        ui.input_checkbox(
+                'legend',
+                'show legend',
+                True
+            )
 
         ui.input_checkbox(
                 'p_test',
