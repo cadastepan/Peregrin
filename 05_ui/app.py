@@ -932,7 +932,7 @@ with ui.nav_panel("Visualisation"):
                         lw=line_width.get(),
                         arrowsize=arrow_size.get()
                         )
-                @render.download(label="Download track visualization", filename="Track visualization.svg")
+                @render.download(label="Download figure", filename="Track visualization.svg")
                 def download_tracks_plot():
                     figure = pu.visualize_tracks(
                         df=Spot_stats_df.get(),
@@ -1537,13 +1537,13 @@ with ui.nav_panel("Statistics"):
 
                 if metric in Track_metrics.get():
                     df = Track_stats_df.get()
-                elif df.empty:
+                if df.empty:
                     return plt.figure()
-                else:
-                    return plt.figure()
-                return pu.swarm_plot(df, metric, dict_Metrics[metric])
+                # else:
+                #     return plt.figure()
+                return pu.swarm_plot(df, metric, dict_Metrics[metric], show_violin=input.violins(), show_swarm=input.swarm(), show_mean=input.mean(), show_median=input.median(), show_error_bars=input.errorbars(), show_legend=input.legend(), p_testing=input.p_test())
             
-            @render.download(label="Download", filename="Swarmplot.svg")
+            @render.download(label="Download figure", filename="Swarmplot.svg")
             def download_swarmplot():
                 metric = input.testing_metric()
 
@@ -1551,22 +1551,65 @@ with ui.nav_panel("Statistics"):
                     df = Track_stats_df.get()
                 elif df.empty:
                     return plt.figure()
-                else:
-                    return plt.figure()
+                # else:
+                #     return plt.figure()
             
-                figure = pu.swarm_plot(df, metric, dict_Metrics[metric])
+                figure = pu.swarm_plot(df, metric, dict_Metrics[metric], show_violin=input.violins(), show_swarm=input.swarm(), show_mean=input.mean(), show_median=input.median(), show_error_bars=input.errorbars(), show_legend=input.legend(), p_testing=input.p_test())
                 with io.BytesIO() as buf:
                     figure.savefig(buf, format="svg")
                     yield buf.getvalue()
+            
 
 
     with ui.panel_well():
+
         ui.input_select(  
                 "testing_metric",  
                 "Test for metric:",  
                 dict_Track_metrics 
             )  
+        
+        ui.input_checkbox(
+                'violins',
+                'show violins',
+                True
+            )
+
+        ui.input_checkbox(
+                'swarm',
+                'show swarm',
+                True
+            )
     
+        ui.input_checkbox(
+                'mean',
+                'show mean',
+                True
+            )
+
+        ui.input_checkbox(
+                'median',
+                'show median',
+                True
+            )
+
+        ui.input_checkbox(
+                'errorbars',
+                'show error bars',
+                True
+            )
+        
+        ui.input_checkbox(
+                'legend',
+                'show legend',
+                True
+            )
+
+        ui.input_checkbox(
+                'p_test',
+                'P-test',
+                False
+            )
 
 
 
